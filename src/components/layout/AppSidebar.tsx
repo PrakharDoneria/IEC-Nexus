@@ -22,7 +22,6 @@ const navItems = [
   { href: '/groups', icon: Users, label: 'Groups' },
   { href: '/resources', icon: BookOpen, label: 'Resources' },
   { href: '/profile', icon: User, label: 'Profile' },
-  { href: '/settings', icon: Settings, label: 'Settings' },
 ];
 
 const NavLink = ({ item, isCollapsed }: { item: typeof navItems[0], isCollapsed: boolean }) => {
@@ -33,7 +32,12 @@ const NavLink = ({ item, isCollapsed }: { item: typeof navItems[0], isCollapsed:
   const href = item.href === '/profile' && user ? `/profile/${user.id}` : item.href;
   
   // Make profile link active on any /profile/[id] page
-  const isActive = item.href === '/profile' ? pathname.startsWith('/profile') : pathname === href;
+  let isActive = pathname === href;
+  if (item.href === '/profile') {
+    isActive = pathname.startsWith('/profile');
+  } else if (item.href === '/settings') {
+     isActive = pathname.startsWith('/settings');
+  }
 
 
   const linkContent = (
@@ -72,6 +76,8 @@ const NavLink = ({ item, isCollapsed }: { item: typeof navItems[0], isCollapsed:
 export function AppSidebar() {
   const [isCollapsed, setIsCollapsed] = React.useState(false);
   const { user, logout } = useAuth(); 
+  const pathname = usePathname();
+  const isSettingsActive = pathname.startsWith('/settings');
 
   return (
     <aside className={cn(
@@ -96,7 +102,20 @@ export function AppSidebar() {
       </div>
 
       <div className="mt-auto p-4 space-y-2 border-t-2 border-foreground">
-        <div className={cn("flex items-center gap-3", isCollapsed ? "justify-center" : "")}>
+         <div className="px-2 space-y-1">
+             <Link
+                href="/settings"
+                className={cn(
+                    'flex items-center gap-3 rounded-md px-3 py-2 text-muted-foreground transition-colors hover:text-foreground hover:bg-secondary',
+                    isSettingsActive && 'bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground',
+                    isCollapsed ? 'justify-center' : ''
+                )}
+                >
+                <Settings className="h-5 w-5" />
+                {!isCollapsed && <span className="font-medium">Settings</span>}
+            </Link>
+        </div>
+        <div className={cn("flex items-center gap-3 pt-2", isCollapsed ? "justify-center" : "")}>
           <Avatar className="h-10 w-10 border-2 border-foreground">
             <AvatarImage src={user?.avatar} alt={user?.name} data-ai-hint="user avatar" />
             <AvatarFallback>{user?.name?.charAt(0)}</AvatarFallback>

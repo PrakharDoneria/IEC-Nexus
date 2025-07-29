@@ -109,7 +109,7 @@ function CreateGroupDialog() {
                     <DialogDescription>
                         Fill in the details to create your own collaboration space.
                     </DialogDescription>
-                </DialogHeader>
+                </Header>
                 <div className="grid gap-4 py-4">
                     <div className="space-y-2">
                         <Label htmlFor="name">Group Name</Label>
@@ -136,7 +136,7 @@ export default function GroupsPage() {
         <MobileNav />
         <header className="flex h-16 items-center justify-between border-b-2 border-foreground bg-card px-4 md:px-6">
             <h1 className="text-2xl font-headline font-bold">Groups</h1>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4">
                 <JoinGroupDialog />
                 <CreateGroupDialog />
             </div>
