@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useParams } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
+import { toast } from "@/hooks/use-toast";
 
 function ProfilePostCard({ post }: { post: Post }) {
   return (
@@ -27,22 +28,41 @@ function ProfilePostCard({ post }: { post: Post }) {
 }
 
 function FollowButton({ profileUser }: { profileUser: User }) {
-    const { user, idToken } = useAuth();
-    // Safely check for `user.following`
+    const { user, idToken, authLoading, refreshUser } = useAuth();
     const [isFollowing, setIsFollowing] = React.useState(user?.following?.includes(profileUser.id) ?? false);
     const [loading, setLoading] = React.useState(false);
     
     React.useEffect(() => {
-       setIsFollowing(user?.following?.includes(profileUser.id) ?? false)
+       if (user?.following) {
+         setIsFollowing(user.following.includes(profileUser.id));
+       }
     }, [user, profileUser.id])
 
     const handleFollow = async () => {
+        if (!idToken) {
+            toast({ variant: "destructive", title: "Error", description: "You must be logged in to follow users." });
+            return;
+        }
         setLoading(true);
-        // Add API call logic here
-        await new Promise(resolve => setTimeout(resolve, 500));
-        setIsFollowing(!isFollowing);
-        setLoading(false);
+        try {
+            const res = await fetch(`/api/users/${profileUser.id}/follow`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${idToken}` },
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message);
+            
+            setIsFollowing(data.isFollowing);
+            await refreshUser(); // Refresh current user's following list
+            
+        } catch(error: any) {
+            toast({ variant: "destructive", title: "Error", description: error.message });
+        } finally {
+            setLoading(false);
+        }
     }
+
+    if (authLoading) return <NeoButton disabled><Loader2 className="h-4 w-4 animate-spin"/></NeoButton>;
 
     return (
         <NeoButton onClick={handleFollow} disabled={loading}>
@@ -51,6 +71,41 @@ function FollowButton({ profileUser }: { profileUser: User }) {
         </NeoButton>
     )
 }
+
+function BanButton({ profileUser, onBan }: { profileUser: User; onBan: () => void }) {
+    const { idToken } = useAuth();
+    const [loading, setLoading] = React.useState(false);
+
+    const handleBan = async () => {
+        if (!idToken) return;
+        if (!confirm(`Are you sure you want to ban ${profileUser.name}? This action cannot be undone.`)) return;
+
+        setLoading(true);
+        try {
+            const res = await fetch(`/api/users/${profileUser.id}/ban`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${idToken}` },
+            });
+             const data = await res.json();
+            if (!res.ok) throw new Error(data.message || "Failed to ban user.");
+            toast({ title: "User Banned", description: `${profileUser.name} has been banned.`});
+            onBan();
+
+        } catch(error: any) {
+            toast({ variant: "destructive", title: "Error", description: error.message });
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    return (
+        <NeoButton variant="destructive" onClick={handleBan} disabled={loading}>
+            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <ShieldBan className="mr-2 h-4 w-4" />}
+            Ban User
+        </NeoButton>
+    )
+}
+
 
 export default function ProfilePage() {
   const { user: currentUser, authLoading } = useAuth();
@@ -63,9 +118,8 @@ export default function ProfilePage() {
   const [error, setError] = React.useState<string | null>(null);
   
 
-  React.useEffect(() => {
-    if (profileId) {
-        const fetchProfile = async () => {
+  const fetchProfile = React.useCallback(async () => {
+        if (profileId) {
             setLoading(true);
             setError(null);
             try {
@@ -81,15 +135,22 @@ export default function ProfilePage() {
                 const postsData = await postsRes.json();
                 setUserPosts(postsData.posts);
 
-            } catch (err) {
+            } catch (err: any) {
                 setError(err.message || 'Could not load profile.');
             } finally {
                 setLoading(false);
             }
-        };
-        fetchProfile();
-    }
+        }
   }, [profileId]);
+
+
+  React.useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
+  
+  const handleUserBanned = () => {
+    setProfileUser(prev => prev ? { ...prev, isBanned: true } : null);
+  };
 
 
   if (loading || authLoading) {
@@ -114,6 +175,20 @@ export default function ProfilePage() {
            </div>
       )
   }
+  
+  if (profileUser.isBanned) {
+      return (
+           <div className="flex min-h-screen bg-background">
+              <AppSidebar />
+              <div className="flex-1 flex flex-col items-center justify-center text-center p-4">
+                 <ShieldBan className="h-16 w-16 text-destructive mb-4" />
+                 <h2 className="text-2xl font-bold font-headline">User Banned</h2>
+                 <p className="text-muted-foreground mt-2">This user's account has been suspended.</p>
+              </div>
+           </div>
+      )
+  }
+
 
   const isOwnProfile = currentUser?.id === profileUser.id;
 
@@ -149,14 +224,11 @@ export default function ProfilePage() {
                 ) : (
                     <>
                         <FollowButton profileUser={profileUser} />
-                        <NeoButton variant="secondary">Message</NeoButton>
+                        <NeoButton variant="secondary" disabled>Message</NeoButton>
                     </>
                 )}
                  {currentUser?.role === 'Faculty' && !isOwnProfile && (
-                        <NeoButton variant="destructive">
-                          <ShieldBan className="mr-2 h-4 w-4" />
-                          Ban User
-                      </NeoButton>
+                        <BanButton profileUser={profileUser} onBan={handleUserBanned}/>
                   )}
               </div>
             </div>

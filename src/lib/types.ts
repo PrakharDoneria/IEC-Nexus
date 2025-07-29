@@ -1,3 +1,4 @@
+
 import { ObjectId } from "mongodb";
 
 export type User = {
@@ -10,6 +11,7 @@ export type User = {
   fcmToken?: string;
   following?: string[];
   followers?: string[];
+  isBanned?: boolean;
 };
 
 export type Comment = {

@@ -2,7 +2,7 @@
 'use client';
 
 import * as React from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { NeoCard, NeoCardContent, NeoCardFooter, NeoCardHeader } from "@/components/NeoCard";
@@ -22,10 +22,11 @@ import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
 
-function SinglePostCard({ post: initialPost }: { post: Post }) {
+function SinglePostCard({ post: initialPost, onDelete }: { post: Post, onDelete: () => void }) {
     const { user, idToken } = useAuth();
     const [post, setPost] = React.useState(initialPost);
     const [isLiked, setIsLiked] = React.useState((post.likes || []).includes(user?.id ?? ''));
+    const [isDeleting, setIsDeleting] = React.useState(false);
 
      React.useEffect(() => {
         setPost(initialPost);
@@ -38,6 +39,8 @@ function SinglePostCard({ post: initialPost }: { post: Post }) {
         const originalPost = post;
         const newIsLiked = !isLiked;
         
+        const newLikesCount = newIsLiked ? (post.likes || []).length + 1 : (post.likes || []).length - 1;
+
         // Optimistic update
         const newPost = {
             ...post,
@@ -63,6 +66,30 @@ function SinglePostCard({ post: initialPost }: { post: Post }) {
         }
     };
     
+      const handleDelete = async () => {
+        if (!idToken) return;
+        setIsDeleting(true);
+        try {
+        const response = await fetch(`/api/posts/${post._id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${idToken}` },
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to delete post');
+        }
+        
+        toast({ title: "Post Deleted", description: "The post has been removed." });
+        onDelete();
+
+        } catch (error: any) {
+            toast({ variant: "destructive", title: "Error", description: error.message });
+            setIsDeleting(false);
+        }
+    }
+
+
     if (!post || !post.author) {
         return null;
     }
@@ -84,13 +111,13 @@ function SinglePostCard({ post: initialPost }: { post: Post }) {
                 {user?.role === 'Faculty' && (
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
+                            <Button variant="ghost" size="icon" disabled={isDeleting}>
                                 <MoreVertical className="h-5 w-5" />
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="border-2 border-foreground shadow-[4px_4px_0px_hsl(var(--foreground))]">
-                            <DropdownMenuItem className="text-destructive focus:bg-destructive/10 focus:text-destructive">
-                                <Trash2 className="mr-2 h-4 w-4"/>
+                            <DropdownMenuItem onClick={handleDelete} className="text-destructive focus:bg-destructive/10 focus:text-destructive" disabled={isDeleting}>
+                                {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Trash2 className="mr-2 h-4 w-4"/>}
                                 <span>Delete Post</span>
                             </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -149,10 +176,16 @@ function CommentSection({ postId, onCommentAdded }: { postId: string, onCommentA
     React.useEffect(() => {
         const fetchComments = async () => {
             setLoading(true);
-            const res = await fetch(`/api/posts/${postId}/comments`);
-            const data = await res.json();
-            setComments(data);
-            setLoading(false);
+            try {
+                const res = await fetch(`/api/posts/${postId}/comments`);
+                if (!res.ok) throw new Error("Failed to fetch comments");
+                const data = await res.json();
+                setComments(data);
+            } catch (error) {
+                 toast({ variant: 'destructive', title: 'Error', description: "Could not load comments."});
+            } finally {
+                setLoading(false);
+            }
         };
         fetchComments();
     }, [postId]);
@@ -206,6 +239,7 @@ function CommentSection({ postId, onCommentAdded }: { postId: string, onCommentA
 
 export default function PostPage() {
   const params = useParams();
+  const router = useRouter();
   const postId = params.id as string;
   const [post, setPost] = React.useState<Post | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -237,6 +271,10 @@ export default function PostPage() {
   const handlePostUpdate = () => {
       fetchPost();
   }
+  
+  const handlePostDeleted = () => {
+      router.push('/feed');
+  }
 
   const renderContent = () => {
     if (loading) {
@@ -259,7 +297,7 @@ export default function PostPage() {
                     <h1 className="text-2xl font-headline font-bold">Post Details</h1>
                 </header>
                 <main className="flex-1 p-4 md:p-6 lg:p-8">
-                    <SinglePostCard post={post} />
+                    <SinglePostCard post={post} onDelete={handlePostDeleted}/>
                     <CommentSection postId={postId} onCommentAdded={handlePostUpdate}/>
                 </main>
             </>

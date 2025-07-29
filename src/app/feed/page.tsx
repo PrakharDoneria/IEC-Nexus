@@ -11,8 +11,8 @@ import { NeoButton } from '@/components/NeoButton';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { ThumbsUp, MessageCircle, Link as LinkIcon, Users, BookOpen, Search, Share2, MoreVertical, Trash2, Copy, Loader2 } from 'lucide-react';
-import type { Post } from '@/lib/types';
+import { ThumbsUp, MessageCircle, Link as LinkIcon, Users, BookOpen, Search, Share2, MoreVertical, Trash2, Copy, Loader2, User as UserIcon } from 'lucide-react';
+import type { Post, User } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import {
   DropdownMenu,
@@ -164,11 +164,12 @@ function ShareDialog({ post }: { post: Post }) {
 }
 
 
-function PostCard({ post: initialPost, currentUser }: { post: Post, currentUser: any }) {
+function PostCard({ post: initialPost, currentUser, onDelete }: { post: Post; currentUser: any; onDelete: (postId: string) => void; }) {
   const { idToken } = useAuth();
   const router = useRouter();
   const [post, setPost] = useState(initialPost);
   const [isLiked, setIsLiked] = useState((post.likes || []).includes(currentUser?.id));
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const formattedTimestamp = formatDistanceToNow(new Date(post.timestamp), { addSuffix: true });
 
@@ -207,6 +208,30 @@ function PostCard({ post: initialPost, currentUser }: { post: Post, currentUser:
       toast({ variant: "destructive", title: "Error", description: "Could not update like." });
     }
   };
+  
+  const handleDelete = async () => {
+    if (!idToken) return;
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/posts/${post._id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${idToken}` },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete post');
+      }
+      
+      toast({ title: "Post Deleted", description: "The post has been removed." });
+      onDelete(post._id as unknown as string);
+
+    } catch (error: any) {
+        toast({ variant: "destructive", title: "Error", description: error.message });
+        setIsDeleting(false);
+    }
+  }
+
 
   return (
     <NeoCard>
@@ -225,13 +250,13 @@ function PostCard({ post: initialPost, currentUser }: { post: Post, currentUser:
             {currentUser?.role === 'Faculty' && (
                  <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                         <Button variant="ghost" size="icon">
+                         <Button variant="ghost" size="icon" disabled={isDeleting}>
                             <MoreVertical className="h-5 w-5" />
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="border-2 border-foreground shadow-[4px_4px_0px_hsl(var(--foreground))]">
-                        <DropdownMenuItem className="text-destructive focus:bg-destructive/10 focus:text-destructive">
-                            <Trash2 className="mr-2 h-4 w-4"/>
+                        <DropdownMenuItem onClick={handleDelete} className="text-destructive focus:bg-destructive/10 focus:text-destructive" disabled={isDeleting}>
+                            {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Trash2 className="mr-2 h-4 w-4"/>}
                             <span>Delete Post</span>
                         </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -299,17 +324,45 @@ function RightSidebar() {
 
 function SearchBar() {
   const [query, setQuery] = useState('');
+  const [suggestions, setSuggestions] = useState<User[]>([]);
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    if (query.length < 2) {
+      setSuggestions([]);
+      return;
+    }
+
+    const fetchSuggestions = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+        const data = await response.json();
+        setSuggestions(data.users);
+      } catch (error) {
+        console.error("Failed to fetch search suggestions", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    const debounceTimer = setTimeout(fetchSuggestions, 300);
+    return () => clearTimeout(debounceTimer);
+
+  }, [query]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (query.trim()) {
       router.push(`/search?q=${encodeURIComponent(query.trim())}`);
+      setSuggestions([]);
+      setQuery('');
     }
   }
 
   return (
-    <form onSubmit={handleSearch}>
+    <form onSubmit={handleSearch} className="relative">
         <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <Input 
@@ -318,8 +371,33 @@ function SearchBar() {
               className="pl-10 border-2 border-foreground"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
+              onBlur={() => setTimeout(() => setSuggestions([]), 150)}
             />
         </div>
+        {suggestions.length > 0 && (
+          <div className="absolute top-full mt-2 w-full bg-card border-2 border-foreground rounded-md shadow-lg z-20">
+            <ul>
+              {suggestions.map(user => (
+                <li key={user.id}>
+                  <Link 
+                    href={`/profile/${user.id}`} 
+                    className="flex items-center gap-3 p-3 hover:bg-secondary"
+                    onClick={() => { setSuggestions([]); setQuery(''); }}
+                  >
+                    <Avatar className="h-8 w-8">
+                       <AvatarImage src={user.avatar} />
+                       <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-semibold">{user.name}</p>
+                      <p className="text-xs text-muted-foreground">{user.role}</p>
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
     </form>
   )
 }
@@ -356,7 +434,12 @@ export default function FeedPage() {
 
   const handleAddPost = (newPost: Post) => {
     setPosts([newPost, ...posts]);
-  }
+  };
+  
+  const handleDeletePost = (postId: string) => {
+    setPosts(posts.filter(p => p._id?.toString() !== postId));
+  };
+
 
   if (authLoading) {
     return (
@@ -385,7 +468,7 @@ export default function FeedPage() {
                 <div className="space-y-6">
                     {loading && <div className="text-center p-8"><Loader2 className="h-8 w-8 animate-spin mx-auto"/></div>}
                     {error && <div className="text-center p-8 text-destructive">{error}</div>}
-                    {!loading && !error && posts.map(post => <PostCard key={post._id?.toString()} post={post} currentUser={user} />)}
+                    {!loading && !error && posts.map(post => <PostCard key={post._id?.toString()} post={post} currentUser={user} onDelete={handleDeletePost} />)}
                 </div>
             </div>
             <RightSidebar />

@@ -16,6 +16,7 @@ interface AuthContextType {
   idToken: string | null;
   authLoading: boolean;
   logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -61,6 +62,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
+  const fetchUserProfile = useCallback(async (token: string) => {
+    const res = await fetch('/api/users/current', {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (res.ok) {
+        const profile = await res.json();
+        setUser(profile);
+        return profile;
+    } else {
+        const auth = getAuth(app);
+        await auth.signOut();
+        return null;
+    }
+  }, []);
+
+  const refreshUser = useCallback(async () => {
+    const auth = getAuth(app);
+    const currentUser = auth.currentUser;
+    if (currentUser) {
+        const token = await currentUser.getIdToken(true); // Force refresh
+        setIdToken(token);
+        await fetchUserProfile(token);
+    }
+  }, [fetchUserProfile]);
+
+
   useEffect(() => {
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
         const messaging = getMessaging(app);
@@ -85,26 +113,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const token = await fbUser.getIdToken();
         setIdToken(token);
         
-        // Fetch user profile from our DB
-        const res = await fetch('/api/users/current', {
-            headers: { Authorization: `Bearer ${token}` }
-        });
+        const fetchedUser = await fetchUserProfile(token);
 
-        if (res.ok) {
-            const profile = await res.json();
-            setUser(profile);
+        if (fetchedUser) {
             requestNotificationPermission(token);
-        } else {
-            // Handle case where user exists in Firebase but not in DB
-            setUser(null);
-            await auth.signOut();
+             if (publicRoutes.includes(pathname)) {
+                router.push('/feed');
+            }
         }
-
-        if (publicRoutes.includes(pathname)) {
-            router.push('/feed');
-        }
-
       } else {
+        if (fbUser && !fbUser.emailVerified) {
+           // User exists but email is not verified. Let them go to login page to see verification message.
+        }
         setFirebaseUser(null);
         setUser(null);
         setIdToken(null);
@@ -116,7 +136,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     return () => unsubscribe();
-  }, [pathname, router, requestNotificationPermission]);
+  }, [pathname, router, requestNotificationPermission, fetchUserProfile]);
 
   const logout = async () => {
     const auth = getAuth(app);
@@ -124,7 +144,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     router.push('/login');
   };
 
-  if (authLoading) {
+  if (authLoading && !user) {
     return (
         <div className="flex min-h-screen w-full items-center justify-center bg-background">
             <Loader2 className="h-10 w-10 animate-spin" />
@@ -133,7 +153,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }
 
   return (
-    <AuthContext.Provider value={{ user, firebaseUser, idToken, authLoading, logout }}>
+    <AuthContext.Provider value={{ user, firebaseUser, idToken, authLoading, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );
