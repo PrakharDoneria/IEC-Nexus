@@ -125,7 +125,6 @@ export async function POST(req: NextRequest, { params }: { params: { conversatio
         const result = await db.collection('messages').insertOne(newMessage);
 
         // Update the conversation with the last message
-        const lastMessageContent = content || 'Image';
         await db.collection('conversations').updateOne(
             { _id: conversationId },
             { $set: { lastMessage: { ...newMessage, _id: result.insertedId } } }
@@ -166,7 +165,7 @@ export async function POST(req: NextRequest, { params }: { params: { conversatio
              const notificationTitle = `New message from ${senderName}`;
              const notificationBody = content ? (content.substring(0, 100) + (content.length > 100 ? '...' : '')) : 'Sent an image';
              const notificationLink = `/messages/${conversationId}`;
-             await sendNotification(recipientId, notificationTitle, notificationBody, notificationLink);
+             await sendNotification(recipientId, notificationTitle, notificationBody, notificationLink, 'directMessage');
         }
 
         return NextResponse.json(createdMessage, { status: 201 });

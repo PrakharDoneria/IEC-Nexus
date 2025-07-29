@@ -3,10 +3,13 @@
 
 import admin from 'firebase-admin';
 import clientPromise from '@/lib/mongodb';
+import { NotificationSettings } from '@/lib/types';
 
 const messaging = admin.messaging();
 
-export async function sendNotification(userId: string, title: string, body: string, link: string) {
+type NotificationCategory = keyof NotificationSettings;
+
+export async function sendNotification(userId: string, title: string, body: string, link: string, category: NotificationCategory) {
   try {
     const client = await clientPromise;
     const db = client.db();
@@ -16,6 +19,21 @@ export async function sendNotification(userId: string, title: string, body: stri
       console.log(`User ${userId} not found or has no FCM token.`);
       return;
     }
+
+    // Check user's notification settings
+    const settings: NotificationSettings = user.notificationSettings || {
+      newFollower: true,
+      postLike: true,
+      postComment: true,
+      groupInvite: true,
+      directMessage: true,
+    };
+
+    if (settings[category] === false) {
+        console.log(`User ${userId} has disabled notifications for ${category}.`);
+        return;
+    }
+
 
     const message: admin.messaging.Message = {
       token: user.fcmToken,

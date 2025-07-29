@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuth } from 'firebase-admin/auth';
 import admin from '@/lib/firebase-admin';
 import clientPromise from '@/lib/mongodb';
+import { NotificationSettings } from '@/lib/types';
 
 export async function GET(req: NextRequest) {
   try {
@@ -47,12 +48,14 @@ export async function PATCH(req: NextRequest) {
     const decodedToken = await getAuth(admin.app()).verifyIdToken(idToken);
     const uid = decodedToken.uid;
 
-    const { name, bio, avatar } = await req.json();
+    const { name, bio, avatar, notificationSettings } = await req.json();
 
-    const updateData: { [key: string]: string } = {};
+    const updateData: { [key: string]: any } = {};
     if (name) updateData.name = name;
     if (bio) updateData.bio = bio;
     if (avatar) updateData.avatar = avatar;
+    if (notificationSettings) updateData.notificationSettings = notificationSettings;
+
 
     if (Object.keys(updateData).length === 0) {
       return NextResponse.json({ message: 'No update data provided' }, { status: 400 });

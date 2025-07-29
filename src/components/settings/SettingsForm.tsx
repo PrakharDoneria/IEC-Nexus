@@ -1,23 +1,37 @@
+
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { NeoButton } from "@/components/NeoButton";
 import { NeoCard, NeoCardContent, NeoCardHeader } from "@/components/NeoCard";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import type { NotificationSettings } from "@/lib/types";
 import { BellDot, Loader2, CheckCircle } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "@/hooks/use-toast";
+
+const defaultSettings: NotificationSettings = {
+  newFollower: true,
+  postLike: true,
+  postComment: true,
+  groupInvite: true,
+  directMessage: true,
+};
 
 export function SettingsForm() {
-  const [settings, setSettings] = useState<NotificationSettings>({
-    newFollower: true,
-    postLike: true,
-    postComment: false,
-    groupInvite: true,
-    directMessage: true,
-  });
+  const { user, idToken, authLoading, refreshUser } = useAuth();
+  const [settings, setSettings] = useState<NotificationSettings>(
+    user?.notificationSettings || defaultSettings
+  );
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    if (user?.notificationSettings) {
+      setSettings(user.notificationSettings);
+    }
+  }, [user]);
 
   const handleToggle = (key: keyof NotificationSettings) => {
     setSettings((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -27,13 +41,41 @@ export function SettingsForm() {
     e.preventDefault();
     setLoading(true);
     setSaved(false);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    console.log("Saved settings:", settings);
-    setLoading(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    
+    try {
+      if (!idToken) throw new Error("Authentication required.");
+      const res = await fetch('/api/users/current', {
+          method: 'PATCH',
+          headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${idToken}`,
+          },
+          body: JSON.stringify({ notificationSettings: settings })
+      });
+      if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.message || "Failed to save settings");
+      }
+      await refreshUser();
+      setSaved(true);
+      toast({ title: "Settings Saved", description: "Your notification preferences have been updated." });
+      setTimeout(() => setSaved(false), 2000);
+    } catch(error: any) {
+        toast({ variant: "destructive", title: "Error", description: error.message });
+    } finally {
+        setLoading(false);
+    }
   };
+
+  if (authLoading) {
+      return (
+          <NeoCard>
+              <NeoCardContent className="p-6 flex justify-center">
+                  <Loader2 className="h-8 w-8 animate-spin" />
+              </NeoCardContent>
+          </NeoCard>
+      )
+  }
 
   return (
     <div className="w-full max-w-2xl mx-auto">

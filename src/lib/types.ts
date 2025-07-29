@@ -13,6 +13,7 @@ export type User = {
   following?: string[];
   followers?: string[];
   isBanned?: boolean;
+  notificationSettings?: NotificationSettings;
 };
 
 export type Comment = {

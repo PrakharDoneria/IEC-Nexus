@@ -101,7 +101,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
              const notificationTitle = `${authorName} commented on your post`;
              const notificationBody = content.substring(0, 100) + (content.length > 100 ? '...' : '');
              const notificationLink = `/posts/${post._id}`;
-             await sendNotification(post.authorId, notificationTitle, notificationBody, notificationLink);
+             await sendNotification(post.authorId, notificationTitle, notificationBody, notificationLink, 'postComment');
         }
 
         // Fetch the created comment with author info to return it

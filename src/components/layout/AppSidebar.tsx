@@ -4,7 +4,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Users, LayoutDashboard, MessageSquare, User, BookOpen, LogOut, Settings, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { Users, LayoutDashboard, MessageSquare, User, BookOpen, LogOut, Settings, PanelLeftClose, PanelLeftOpen, Code } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
@@ -21,6 +21,7 @@ const navItems = [
   { href: '/messages', icon: MessageSquare, label: 'Messages' },
   { href: '/groups', icon: Users, label: 'Groups' },
   { href: '/resources', icon: BookOpen, label: 'Resources' },
+  { href: '/challenge', icon: Code, label: 'Challenge' },
   { href: '/profile', icon: User, label: 'Profile' },
 ];
 
@@ -37,6 +38,8 @@ const NavLink = ({ item, isCollapsed }: { item: typeof navItems[0], isCollapsed:
     isActive = pathname.startsWith('/profile');
   } else if (item.href === '/settings') {
      isActive = pathname.startsWith('/settings');
+  } else if (item.href === '/challenge') {
+    isActive = pathname.startsWith('/challenge');
   }
 
 

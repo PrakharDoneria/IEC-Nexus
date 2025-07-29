@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, Users, LayoutDashboard, MessageSquare, User, BookOpen, Settings } from 'lucide-react';
+import { Menu, Users, LayoutDashboard, MessageSquare, User, BookOpen, Settings, Code } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
@@ -13,6 +13,7 @@ const navItems = [
   { href: '/messages', icon: MessageSquare, label: 'Messages' },
   { href: '/groups', icon: Users, label: 'Groups' },
   { href: '/resources', icon: BookOpen, label: 'Resources' },
+  { href: '/challenge', icon: Code, label: 'Challenge' },
   { href: '/profile', icon: User, label: 'Profile' },
   { href: '/settings', icon: Settings, label: 'Settings' },
 ];

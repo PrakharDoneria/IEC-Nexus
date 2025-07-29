@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import clientPromise from '@/lib/mongodb';
 import { getAuth } from 'firebase-admin/auth';
 import admin from '@/lib/firebase-admin';
+import { sendNotification } from '@/services/notifications';
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -12,6 +13,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     }
     const decodedToken = await getAuth(admin.app()).verifyIdToken(idToken);
     const currentUserId = decodedToken.uid;
+    const currentUserName = decodedToken.name || 'Someone';
     const userToFollowId = params.id;
 
     if (currentUserId === userToFollowId) {
@@ -40,6 +42,13 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       // Follow
       await usersCollection.updateOne({ id: currentUserId }, { $addToSet: { following: userToFollowId } });
       await usersCollection.updateOne({ id: userToFollowId }, { $addToSet: { followers: currentUserId } });
+
+      // Send notification
+      const notificationTitle = `${currentUserName} started following you.`;
+      const notificationBody = `You have a new follower! View their profile to connect.`;
+      const notificationLink = `/profile/${currentUserId}`;
+      await sendNotification(userToFollowId, notificationTitle, notificationBody, notificationLink, 'newFollower');
+
       return NextResponse.json({ message: 'Successfully followed user', isFollowing: true });
     }
 
@@ -51,4 +60,3 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
   }
 }
-
