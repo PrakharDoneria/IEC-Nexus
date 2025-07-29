@@ -1,5 +1,5 @@
 export type User = {
-  id: string;
+  id: string; // This will be the Firebase UID
   name: string;
   email: string;
   avatar: string;
