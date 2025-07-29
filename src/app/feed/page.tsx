@@ -168,7 +168,7 @@ function PostCard({ post: initialPost, currentUser }: { post: Post, currentUser:
   const { idToken } = useAuth();
   const router = useRouter();
   const [post, setPost] = useState(initialPost);
-  const [isLiked, setIsLiked] = useState(post.likes.includes(currentUser?.id));
+  const [isLiked, setIsLiked] = useState((post.likes || []).includes(currentUser?.id));
 
   const formattedTimestamp = formatDistanceToNow(new Date(post.timestamp), { addSuffix: true });
 
@@ -176,13 +176,12 @@ function PostCard({ post: initialPost, currentUser }: { post: Post, currentUser:
     if (!idToken) return;
 
     // Optimistic update
-    const originalLikes = post.likes;
+    const originalLikes = post.likes || [];
     const newIsLiked = !isLiked;
-    const newLikesCount = newIsLiked ? post.likes.length + 1 : post.likes.length - 1;
     
     setPost(prev => ({
         ...prev,
-        likes: newIsLiked ? [...prev.likes, currentUser.id] : prev.likes.filter(id => id !== currentUser.id),
+        likes: newIsLiked ? [...(prev.likes || []), currentUser.id] : (prev.likes || []).filter(id => id !== currentUser.id),
     }));
     setIsLiked(newIsLiked);
 
@@ -252,10 +251,10 @@ function PostCard({ post: initialPost, currentUser }: { post: Post, currentUser:
       <NeoCardFooter className="p-4 sm:p-6 pt-0">
         <div className="flex items-center gap-1 text-muted-foreground">
           <Button variant="ghost" size="sm" className="flex items-center gap-2" onClick={handleLike}>
-            <ThumbsUp className={cn("h-5 w-5", isLiked && "text-primary fill-primary")} /> {post.likes.length}
+            <ThumbsUp className={cn("h-5 w-5", isLiked && "text-primary fill-primary")} /> {(post.likes || []).length}
           </Button>
           <Button variant="ghost" size="sm" className="flex items-center gap-2" onClick={() => router.push(`/posts/${post._id}`)}>
-            <MessageCircle className="h-5 w-5" /> {post.commentCount}
+            <MessageCircle className="h-5 w-5" /> {post.commentCount || 0}
           </Button>
            <ShareDialog post={post} />
         </div>

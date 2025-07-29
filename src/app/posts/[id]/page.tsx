@@ -22,31 +22,33 @@ import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
 
-function SinglePostCard({ post: initialPost }: { post: Post }) {
+function SinglePostCard({ post: initialPost, onLikeUpdate }: { post: Post, onLikeUpdate: (newLikes: string[], newIsLiked: boolean) => void }) {
     const { user, idToken } = useAuth();
     const [post, setPost] = React.useState(initialPost);
-    const [isLiked, setIsLiked] = React.useState(post.likes.includes(user?.id ?? ''));
+    const [isLiked, setIsLiked] = React.useState((post.likes || []).includes(user?.id ?? ''));
 
      React.useEffect(() => {
-        setIsLiked(post.likes.includes(user?.id ?? ''))
+        setIsLiked((post.likes || []).includes(user?.id ?? ''))
     }, [user, post.likes]);
 
      const handleLike = async () => {
         if (!idToken) return;
-        const originalLikes = post.likes;
+        const originalLikes = post.likes || [];
         const newIsLiked = !isLiked;
         
-        setPost(prev => ({ ...prev, likes: newIsLiked ? [...prev.likes, user!.id] : prev.likes.filter(id => id !== user!.id) }));
+        const newLikes = newIsLiked ? [...originalLikes, user!.id] : originalLikes.filter(id => id !== user!.id);
+        
+        onLikeUpdate(newLikes, newIsLiked);
         setIsLiked(newIsLiked);
 
         try {
             const response = await fetch(`/api/posts/${post._id}/like`, { method: 'POST', headers: { 'Authorization': `Bearer ${idToken}` } });
             if (!response.ok) throw new Error('Failed to like post');
             const data = await response.json();
-            setPost(prev => ({...prev, likes: data.likes}));
+            onLikeUpdate(data.likes, data.isLiked);
             setIsLiked(data.isLiked);
         } catch (error) {
-            setPost(prev => ({ ...prev, likes: originalLikes }));
+            onLikeUpdate(originalLikes, !newIsLiked);
             setIsLiked(!newIsLiked);
             toast({ variant: "destructive", title: "Error", description: "Could not update like." });
         }
@@ -99,10 +101,10 @@ function SinglePostCard({ post: initialPost }: { post: Post }) {
         <NeoCardFooter className="p-4 sm:p-6 pt-2 border-t-2 border-foreground">
             <div className="flex items-center gap-4 text-muted-foreground">
             <Button variant="ghost" size="sm" className="flex items-center gap-2" onClick={handleLike}>
-                <ThumbsUp className={cn("h-5 w-5", isLiked && "text-primary fill-primary")} /> {post.likes.length} Likes
+                <ThumbsUp className={cn("h-5 w-5", isLiked && "text-primary fill-primary")} /> {(post.likes || []).length} Likes
             </Button>
             <div className="flex items-center gap-2">
-                <MessageCircle className="h-5 w-5" /> {post.commentCount} Comments
+                <MessageCircle className="h-5 w-5" /> {post.commentCount || 0} Comments
             </div>
             </div>
         </NeoCardFooter>
@@ -223,6 +225,16 @@ export default function PostPage() {
     fetchPost();
   }, [fetchPost]);
 
+  const handlePostUpdate = () => {
+      fetchPost();
+  }
+
+  const handleLikeUpdate = (newLikes: string[]) => {
+      if (post) {
+        setPost({...post, likes: newLikes, commentCount: post.commentCount || 0 });
+      }
+  };
+
   const renderContent = () => {
     if (loading) {
         return <div className="flex-1 flex items-center justify-center"><Loader2 className="h-10 w-10 animate-spin" /></div>;
@@ -244,8 +256,8 @@ export default function PostPage() {
                     <h1 className="text-2xl font-headline font-bold">Post Details</h1>
                 </header>
                 <main className="flex-1 p-4 md:p-6 lg:p-8">
-                    <SinglePostCard post={post} />
-                    <CommentSection postId={postId} onCommentAdded={fetchPost}/>
+                    <SinglePostCard post={post} onLikeUpdate={(newLikes) => handleLikeUpdate(newLikes)} />
+                    <CommentSection postId={postId} onCommentAdded={handlePostUpdate}/>
                 </main>
             </>
         );
