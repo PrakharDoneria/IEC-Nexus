@@ -262,18 +262,14 @@ export default function ProfilePage() {
                             <Mail className="h-5 w-5 text-muted-foreground"/>
                             <span>{profileUser.email}</span>
                         </div>
-                        {profileUser.role === 'Faculty' ? (
-                             <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3">
+                            {profileUser.role === 'Faculty' ? (
                                 <Briefcase className="h-5 w-5 text-muted-foreground"/>
-                                <span>Professor, Computer Science</span>
-                            </div>
-                        ) : (
-                             <div className="flex items-center gap-3">
+                            ) : (
                                 <GraduationCap className="h-5 w-5 text-muted-foreground"/>
-                                <span>B.Tech CSE, 3rd Year</span>
-                            </div>
-                        )}
-                       
+                            )}
+                            <span>{profileUser.bio || "At IEC"}</span>
+                        </div>
                     </NeoCardContent>
                 </NeoCard>
             </div>
