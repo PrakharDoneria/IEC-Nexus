@@ -29,7 +29,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       return NextResponse.json({ message: 'Post not found' }, { status: 404 });
     }
 
-    const hasLiked = post.likes.includes(userId);
+    const likes = post.likes || [];
+    const hasLiked = likes.includes(userId);
     let update;
 
     if (hasLiked) {
@@ -41,21 +42,15 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     }
 
     const result = await postsCollection.updateOne({ _id: postId }, update);
-
-    if (result.modifiedCount === 0 && !hasLiked) {
-        // If no document was modified, it might mean the user was already in the array,
-        // which shouldn't happen with $addToSet unless there's a race condition.
-        // We can just return success anyway.
-    }
     
     const updatedPost = await postsCollection.findOne({ _id: postId });
 
     return NextResponse.json({
-        likes: updatedPost.likes,
+        likes: updatedPost?.likes || [],
         isLiked: !hasLiked
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error liking post:', error);
     if (error.code === 'auth/id-token-expired' || error.code === 'auth/argument-error') {
        return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });

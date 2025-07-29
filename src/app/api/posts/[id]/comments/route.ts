@@ -4,6 +4,7 @@ import clientPromise from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
 import { getAuth } from 'firebase-admin/auth';
 import admin from '@/lib/firebase-admin';
+import { sendNotification } from '@/services/notifications';
 
 // Get comments for a post
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
@@ -60,6 +61,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         }
         const decodedToken = await getAuth(admin.app()).verifyIdToken(idToken);
         const authorId = decodedToken.uid;
+        const authorName = decodedToken.name || 'A user';
 
         if (!ObjectId.isValid(params.id)) {
             return NextResponse.json({ message: 'Invalid post ID' }, { status: 400 });
@@ -73,6 +75,11 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
         const client = await clientPromise;
         const db = client.db();
+
+        const post = await db.collection('posts').findOne({ _id: postId });
+        if (!post) {
+            return NextResponse.json({ message: 'Post not found' }, { status: 404 });
+        }
 
         const newComment = {
             postId,
@@ -88,6 +95,14 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
             { _id: postId },
             { $inc: { commentCount: 1 } }
         );
+        
+        // Send notification if someone else commented
+        if (post.authorId !== authorId) {
+             const notificationTitle = `${authorName} commented on your post`;
+             const notificationBody = content.substring(0, 100) + (content.length > 100 ? '...' : '');
+             const notificationLink = `/posts/${post._id}`;
+             await sendNotification(post.authorId, notificationTitle, notificationBody, notificationLink);
+        }
 
         // Fetch the created comment with author info to return it
         const createdComment = await db.collection('comments').aggregate([

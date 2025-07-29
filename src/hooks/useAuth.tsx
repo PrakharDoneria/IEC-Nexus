@@ -1,12 +1,14 @@
 
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { getAuth, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { getMessaging, getToken, onMessage } from "firebase/messaging";
 import app from '@/lib/firebase';
 import type { User } from '@/lib/types';
 import { useRouter, usePathname } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
+import { toast } from './use-toast';
 
 interface AuthContextType {
   user: User | null;
@@ -28,6 +30,53 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const router = useRouter();
   const pathname = usePathname();
 
+   const requestNotificationPermission = useCallback(async (token: string) => {
+    console.log('Requesting notification permission...');
+    const permission = await Notification.requestPermission();
+    
+    if (permission === 'granted') {
+      console.log('Notification permission granted.');
+      try {
+        const messaging = getMessaging(app);
+        // Use your VAPID key from the Firebase console
+        const fcmToken = await getToken(messaging, { vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY });
+        if (fcmToken) {
+          console.log('FCM Token:', fcmToken);
+          await fetch('/api/users/fcm-token', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ token: fcmToken })
+          });
+        } else {
+          console.log('No registration token available. Request permission to generate one.');
+        }
+      } catch (error) {
+        console.error('An error occurred while retrieving token. ', error);
+      }
+    } else {
+      console.log('Unable to get permission to notify.');
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+        const messaging = getMessaging(app);
+        const unsubscribe = onMessage(messaging, (payload) => {
+            console.log('Message received. ', payload);
+            toast({
+                title: payload.notification?.title,
+                description: payload.notification?.body,
+            });
+        });
+        return () => {
+            unsubscribe();
+        };
+    }
+  }, []);
+
   useEffect(() => {
     const auth = getAuth(app);
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
@@ -44,6 +93,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (res.ok) {
             const profile = await res.json();
             setUser(profile);
+            requestNotificationPermission(token);
         } else {
             // Handle case where user exists in Firebase but not in DB
             setUser(null);
@@ -66,7 +116,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     return () => unsubscribe();
-  }, [pathname, router]);
+  }, [pathname, router, requestNotificationPermission]);
 
   const logout = async () => {
     const auth = getAuth(app);
