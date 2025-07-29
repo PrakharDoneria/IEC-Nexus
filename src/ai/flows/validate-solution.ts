@@ -12,25 +12,8 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import clientPromise from '@/lib/mongodb';
-import { User } from '@/lib/types';
+import { User, ValidateSolutionInputSchema, ValidateSolutionOutputSchema, ValidateSolutionInput, ValidateSolutionOutput } from '@/lib/types';
 
-export const ValidateSolutionInputSchema = z.object({
-  challengeTitle: z.string(),
-  challengeDescription: z.string(),
-  exampleInput: z.string(),
-  exampleOutput: z.string(),
-  userSolution: z.string().describe("The user's code solution, likely in Python or JavaScript."),
-  userId: z.string().describe("The ID of the user submitting the solution."),
-});
-export type ValidateSolutionInput = z.infer<typeof ValidateSolutionInputSchema>;
-
-export const ValidateSolutionOutputSchema = z.object({
-  isCorrect: z.boolean().describe('Whether the user\'s solution is correct.'),
-  feedback: z.string().describe('Constructive feedback on the user\'s solution, explaining why it is correct or incorrect.'),
-  pointsAwarded: z.number().describe('The number of points awarded for a correct solution.'),
-  newScore: z.number().describe("The user's new total score after this submission."),
-});
-export type ValidateSolutionOutput = z.infer<typeof ValidateSolutionOutputSchema>;
 
 export async function validateSolution(input: ValidateSolutionInput): Promise<ValidateSolutionOutput> {
   return validateSolutionFlow(input);
