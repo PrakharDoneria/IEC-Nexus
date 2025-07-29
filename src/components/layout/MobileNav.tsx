@@ -24,6 +24,7 @@ const bottomNavItems = [
   { href: '/feed', icon: LayoutDashboard, label: 'Feed' },
   { href: '/groups', icon: Users, label: 'Groups' },
   { href: '/challenge', icon: Code, label: 'Challenge' },
+  { href: '/leaderboard', icon: Trophy, label: 'Leaderboard' },
   { href: '/messages', icon: MessageSquare, label: 'Messages', requiresBadge: true },
   { href: '/profile', icon: User, label: 'Profile' },
 ];
@@ -75,7 +76,7 @@ export function MobileNav({ children, pageTitle }: { children?: React.ReactNode,
 
 
       {/* Bottom Navigation */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-card border-t-2 border-foreground h-16 z-10 flex justify-around items-center">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-card border-t-2 border-foreground h-16 z-10 grid grid-cols-6 justify-around items-center">
         {bottomNavItems.map(item => {
           const href = item.href === '/profile' && user ? `/profile/${user.id}` : item.href;
           const isActive = (
