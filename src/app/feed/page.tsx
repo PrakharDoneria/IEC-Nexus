@@ -1,3 +1,7 @@
+
+"use client";
+
+import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { AppSidebar } from '@/components/layout/AppSidebar';
@@ -7,8 +11,8 @@ import { NeoButton } from '@/components/NeoButton';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { ThumbsUp, MessageCircle, Link as LinkIcon, Users, BookOpen, Search, Share2, MoreVertical, Trash2, Code, Copy } from 'lucide-react';
-import { mockPosts, mockGroups, mockUsers } from '@/lib/mock';
+import { ThumbsUp, MessageCircle, Link as LinkIcon, Users, BookOpen, Search, Share2, MoreVertical, Trash2, Copy } from 'lucide-react';
+import { mockPosts as initialMockPosts, mockGroups, mockUsers } from '@/lib/mock';
 import type { Post } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import {
@@ -29,7 +33,25 @@ import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 
 
-function CreatePost() {
+function CreatePost({ onAddPost }: { onAddPost: (newPost: Post) => void }) {
+  const [postContent, setPostContent] = useState('');
+  const currentUser = mockUsers[0];
+
+  const handlePost = () => {
+    if (!postContent.trim()) return;
+
+    const newPost: Post = {
+        id: `p${Date.now()}`,
+        author: currentUser,
+        content: postContent,
+        timestamp: 'Just now',
+        likes: 0,
+        comments: 0,
+    };
+    onAddPost(newPost);
+    setPostContent('');
+  };
+
   return (
     <NeoCard>
       <NeoCardContent className="p-4">
@@ -42,12 +64,14 @@ function CreatePost() {
             <Textarea
               placeholder="What's on your mind, Alia?"
               className="min-h-24 border-2 border-foreground mb-4"
+              value={postContent}
+              onChange={(e) => setPostContent(e.target.value)}
             />
             <div className="flex justify-between items-center">
                 <Button variant="ghost" size="icon">
                     <LinkIcon className="h-5 w-5"/>
                 </Button>
-                <NeoButton>Post</NeoButton>
+                <NeoButton onClick={handlePost}>Post</NeoButton>
             </div>
           </div>
         </div>
@@ -57,7 +81,14 @@ function CreatePost() {
 }
 
 function ShareDialog({ post }: { post: Post }) {
-  const postUrl = typeof window !== 'undefined' ? `${window.location.origin}/posts/${post.id}` : '';
+  const [postUrl, setPostUrl] = React.useState('');
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setPostUrl(`${window.location.origin}/posts/${post.id}`);
+    }
+  }, [post.id]);
+
   const embedCode = `<iframe src="${postUrl}" width="600" height="400" frameborder="0"></iframe>`;
 
   const copyToClipboard = (text: string, type: string) => {
@@ -205,6 +236,12 @@ function RightSidebar() {
 }
 
 export default function FeedPage() {
+  const [mockPosts, setMockPosts] = useState(initialMockPosts);
+
+  const handleAddPost = (newPost: Post) => {
+    setMockPosts([newPost, ...mockPosts]);
+  }
+
   return (
     <div className="flex min-h-screen bg-background">
       <AppSidebar />
@@ -225,7 +262,7 @@ export default function FeedPage() {
         </header>
         <main className="flex-1 p-4 md:p-6 lg:p-8 flex gap-8">
             <div className="flex-1 space-y-6">
-                <CreatePost />
+                <CreatePost onAddPost={handleAddPost} />
                 <div className="space-y-6">
                     {mockPosts.map(post => <PostCard key={post.id} post={post} />)}
                 </div>
@@ -236,5 +273,3 @@ export default function FeedPage() {
     </div>
   );
 }
-
-    

@@ -1,9 +1,13 @@
+
+"use client";
+
+import React, { useState } from "react";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { NeoButton } from "@/components/NeoButton";
-import { mockUsers, mockConversations, mockMessages } from "@/lib/mock";
+import { mockUsers, mockConversations, mockMessages as initialMockMessages } from "@/lib/mock";
 import type { Conversation, Message } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Search, Send } from "lucide-react";
@@ -41,8 +45,24 @@ function ConversationList() {
 
 function MessageView() {
     const conversationId = mockConversations[0].id;
-    const messages = mockMessages[conversationId];
+    const [messages, setMessages] = useState(initialMockMessages[conversationId] || []);
+    const [newMessage, setNewMessage] = useState("");
     const currentUser = mockUsers[0];
+
+    const handleSendMessage = (e: React.FormEvent) => {
+        e.preventDefault();
+        if(!newMessage.trim()) return;
+
+        const message: Message = {
+            id: `m${Date.now()}`,
+            sender: currentUser,
+            content: newMessage,
+            timestamp: 'Just now',
+        };
+
+        setMessages([...messages, message]);
+        setNewMessage('');
+    }
 
     return (
         <div className="flex flex-col h-full">
@@ -71,8 +91,13 @@ function MessageView() {
                 ))}
             </div>
              <footer className="p-4 border-t-2 border-foreground">
-                <form className="flex gap-4">
-                    <Input placeholder="Type a message..." className="flex-1 border-2 border-foreground"/>
+                <form className="flex gap-4" onSubmit={handleSendMessage}>
+                    <Input 
+                        placeholder="Type a message..." 
+                        className="flex-1 border-2 border-foreground"
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                    />
                     <NeoButton size="icon" type="submit">
                         <Send className="h-5 w-5"/>
                     </NeoButton>
