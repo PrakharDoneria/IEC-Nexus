@@ -29,4 +29,6 @@ if (process.env.NODE_ENV === "development") {
   clientPromise = client.connect()
 }
 
-// Export a module-scoped MongoClient promise. By doing this
+// Export a module-scoped MongoClient promise. By doing this, the connection
+// will be shared across functions.
+export default clientPromise;
