@@ -10,8 +10,8 @@ export type User = {
   bio?: string;
   role: 'Student' | 'Faculty';
   fcmToken?: string;
-  following?: string[];
-  followers?: string[];
+  following?: string[] | User[];
+  followers?: string[] | User[];
   isBanned?: boolean;
   notificationSettings?: NotificationSettings;
   score?: number;

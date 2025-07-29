@@ -22,9 +22,9 @@ function LeaderboardRow({ user, rank }: { user: User; rank: number }) {
     <NeoCard>
       <NeoCardContent className="p-3">
         <div className="flex items-center gap-4">
-          <div className="flex items-center justify-center w-8">
+          <div className="flex items-center justify-center w-10">
             {rank < 3 ? (
-              <Trophy className={`h-6 w-6 ${rankColors[rank]}`} />
+              <Trophy className={`h-7 w-7 ${rankColors[rank]}`} />
             ) : (
               <span className="font-bold text-lg text-muted-foreground">{rank + 1}</span>
             )}

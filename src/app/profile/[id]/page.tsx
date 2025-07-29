@@ -15,6 +15,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useParams, useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 function ProfilePostCard({ post }: { post: Post }) {
   return (
@@ -27,7 +29,7 @@ function ProfilePostCard({ post }: { post: Post }) {
   )
 }
 
-function FollowButton({ profileUser }: { profileUser: User }) {
+function FollowButton({ profileUser, onFollowToggle }: { profileUser: User, onFollowToggle: (isFollowing: boolean) => void }) {
     const { user, idToken, authLoading, refreshUser } = useAuth();
     const [isFollowing, setIsFollowing] = React.useState(user?.following?.includes(profileUser.id) ?? false);
     const [loading, setLoading] = React.useState(false);
@@ -53,6 +55,7 @@ function FollowButton({ profileUser }: { profileUser: User }) {
             if (!res.ok) throw new Error(data.message);
             
             setIsFollowing(data.isFollowing);
+            onFollowToggle(data.isFollowing); // Callback to update profile page state
             await refreshUser(); // Refresh current user's following list
             
         } catch(error: any) {
@@ -121,6 +124,37 @@ function MessageButton({ profileUser }: { profileUser: User }) {
     )
 }
 
+function FollowListDialog({ userList, title }: { userList: User[], title: string }) {
+    return (
+        <DialogContent className="sm:max-w-md border-2 border-foreground shadow-[4px_4px_0px_hsl(var(--foreground))]">
+            <DialogHeader>
+                <DialogTitle className="font-headline">{title}</DialogTitle>
+            </DialogHeader>
+            <ScrollArea className="h-72">
+                <div className="space-y-4 pr-6">
+                    {userList.length > 0 ? userList.map(user => (
+                        <div key={user.id} className="flex items-center justify-between">
+                            <Link href={`/profile/${user.id}`} className="flex items-center gap-3 hover:underline">
+                                <Avatar className="h-10 w-10">
+                                    <AvatarImage src={user.avatar} />
+                                    <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                                <div>
+                                    <p className="font-semibold">{user.name}</p>
+                                    <p className="text-sm text-muted-foreground">{user.role}</p>
+                                </div>
+                            </Link>
+                            {/* You could add a follow button here too if desired */}
+                        </div>
+                    )) : (
+                        <p className="text-muted-foreground text-center pt-4">This list is empty.</p>
+                    )}
+                </div>
+            </ScrollArea>
+        </DialogContent>
+    )
+}
+
 
 export default function ProfilePage() {
   const { user: currentUser, authLoading } = useAuth();
@@ -139,7 +173,7 @@ export default function ProfilePage() {
             setError(null);
             try {
                 // Fetch profile user data
-                const userRes = await fetch(`/api/users/${profileId}`);
+                const userRes = await fetch(`/api/users/${profileId}?populate=followers,following`);
                 if (!userRes.ok) throw new Error('Failed to fetch user profile');
                 const userData = await userRes.json();
                 setProfileUser(userData);
@@ -166,6 +200,29 @@ export default function ProfilePage() {
   const handleUserBanned = () => {
     setProfileUser(prev => prev ? { ...prev, isBanned: true } : null);
   };
+  
+   const handleFollowToggle = React.useCallback((isFollowing: boolean) => {
+        setProfileUser(prev => {
+            if (!prev || !currentUser) return prev;
+            
+            const currentFollowers = (prev.followers || []) as User[];
+            let newFollowers;
+
+            if (isFollowing) {
+                // Add current user to followers list if not already present
+                if (!currentFollowers.some(u => u.id === currentUser.id)) {
+                    newFollowers = [...currentFollowers, {id: currentUser.id, name: currentUser.name, avatar: currentUser.avatar, role: currentUser.role, email: currentUser.email}];
+                } else {
+                    newFollowers = currentFollowers;
+                }
+            } else {
+                // Remove current user from followers list
+                newFollowers = currentFollowers.filter(u => u.id !== currentUser.id);
+            }
+            
+            return { ...prev, followers: newFollowers };
+        });
+    }, [currentUser]);
 
 
   if (loading || authLoading) {
@@ -226,10 +283,24 @@ export default function ProfilePage() {
               <div className="flex-1">
                   <h1 className="font-headline text-3xl sm:text-4xl font-bold">{profileUser.name}</h1>
                   <p className="text-muted-foreground text-base sm:text-lg">@{profileUser.name.toLowerCase().replace(' ', '').replace('.', '')}</p>
-                   <p className="mt-2 text-base">{profileUser.bio}</p>
+                   <p className="mt-2 text-base">{profileUser.bio || "At IEC"}</p>
                   <div className="flex gap-4 mt-2 text-sm">
-                      <span className="font-bold">{profileUser.following?.length || 0}</span> Following
-                      <span className="font-bold">{profileUser.followers?.length || 0}</span> Followers
+                    <Dialog>
+                        <DialogTrigger asChild>
+                            <button className="hover:underline">
+                                <span className="font-bold">{(profileUser.following as User[])?.length || 0}</span> Following
+                            </button>
+                        </DialogTrigger>
+                        <FollowListDialog userList={profileUser.following as User[] || []} title="Following"/>
+                    </Dialog>
+                     <Dialog>
+                        <DialogTrigger asChild>
+                           <button className="hover:underline">
+                                <span className="font-bold">{(profileUser.followers as User[])?.length || 0}</span> Followers
+                            </button>
+                        </DialogTrigger>
+                        <FollowListDialog userList={profileUser.followers as User[] || []} title="Followers"/>
+                    </Dialog>
                   </div>
               </div>
               <div className="flex gap-2 mt-4 sm:mt-0">
@@ -239,7 +310,7 @@ export default function ProfilePage() {
                   </NeoButton>
                 ) : (
                     <>
-                        <FollowButton profileUser={profileUser} />
+                        <FollowButton profileUser={profileUser} onFollowToggle={handleFollowToggle} />
                         <MessageButton profileUser={profileUser} />
                     </>
                 )}
