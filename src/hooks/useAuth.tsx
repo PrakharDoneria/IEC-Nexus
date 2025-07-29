@@ -33,6 +33,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const pathname = usePathname();
 
    const requestNotificationPermission = useCallback(async (token: string) => {
+    if (!('Notification' in window) || !('serviceWorker' in navigator) || !process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY) {
+      console.log('Push notifications not supported or VAPID key missing.');
+      return;
+    }
+    
     console.log('Requesting notification permission...');
     const permission = await Notification.requestPermission();
     
@@ -40,7 +45,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('Notification permission granted.');
       try {
         const messaging = getMessaging(app);
-        // Use your VAPID key from the Firebase console
         const fcmToken = await getToken(messaging, { vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY });
         if (fcmToken) {
           console.log('FCM Token:', fcmToken);
