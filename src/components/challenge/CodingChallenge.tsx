@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   generateCodingChallenge,
   type GenerateCodingChallengeOutput,
@@ -14,11 +14,44 @@ import {
 import { NeoButton } from "@/components/NeoButton";
 import { NeoCard, NeoCardContent, NeoCardHeader, NeoCardFooter } from "@/components/NeoCard";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, Lightbulb, AlertTriangle, RefreshCw, CheckCircle, XCircle } from "lucide-react";
+import { Loader2, Lightbulb, AlertTriangle, RefreshCw, CheckCircle, XCircle, TimerIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "../ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
+
+function ChallengeTimer({ difficulty, onTimeUp }: { difficulty: 'Easy' | 'Medium' | 'Hard', onTimeUp: () => void }) {
+    const timeMap = {
+        Easy: 15 * 60,
+        Medium: 30 * 60,
+        Hard: 60 * 60,
+    };
+    const [timeLeft, setTimeLeft] = useState(timeMap[difficulty]);
+
+    useEffect(() => {
+        if (timeLeft <= 0) {
+            onTimeUp();
+            return;
+        }
+
+        const timerId = setInterval(() => {
+            setTimeLeft(prev => prev - 1);
+        }, 1000);
+
+        return () => clearInterval(timerId);
+    }, [timeLeft, onTimeUp]);
+    
+    const minutes = Math.floor(timeLeft / 60);
+    const seconds = timeLeft % 60;
+
+    return (
+        <div className="flex items-center gap-2 font-semibold text-lg">
+            <TimerIcon className="h-5 w-5" />
+            <span>{String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}</span>
+        </div>
+    )
+}
 
 export function CodingChallenge() {
   const { user, idToken, refreshUser } = useAuth();
@@ -29,6 +62,7 @@ export function CodingChallenge() {
   const [solution, setSolution] = useState("");
   const [validating, setValidating] = useState(false);
   const [validationResult, setValidationResult] = useState<ValidateSolutionOutput | null>(null);
+  const [isTimeUp, setIsTimeUp] = useState(false);
 
   const fetchChallenge = async () => {
     setLoading(true);
@@ -36,6 +70,7 @@ export function CodingChallenge() {
     setChallenge(null);
     setSolution("");
     setValidationResult(null);
+    setIsTimeUp(false);
 
     try {
       const response = await generateCodingChallenge();
@@ -49,6 +84,14 @@ export function CodingChallenge() {
   
   const handleValidate = async () => {
     if (!solution.trim() || !challenge || !user || !idToken) return;
+    if (isTimeUp) {
+        toast({
+            variant: "destructive",
+            title: "Time's Up!",
+            description: "You can no longer submit a solution.",
+        });
+        return;
+    }
 
     setValidating(true);
     setValidationResult(null);
@@ -72,12 +115,6 @@ export function CodingChallenge() {
                 className: "bg-green-100 border-green-500 text-green-700"
             });
             await refreshUser(); // Update user context with new score
-        } else {
-             toast({
-                variant: "destructive",
-                title: "Incorrect Solution",
-                description: response.feedback,
-            });
         }
     } catch (e) {
       setError("An error occurred while validating the solution.");
@@ -122,7 +159,7 @@ export function CodingChallenge() {
         </NeoCard>
       )}
 
-      {error && (
+      {error && !loading && (
         <Alert variant="destructive" className="mt-6 border-2 border-foreground shadow-[4px_4px_0px_hsl(var(--foreground))]">
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>Error</AlertTitle>
@@ -139,9 +176,12 @@ export function CodingChallenge() {
                             <Badge variant={challenge.difficulty === 'Easy' ? 'secondary' : challenge.difficulty === 'Medium' ? 'default' : 'destructive'} className="mb-2">{challenge.difficulty}</Badge>
                             <h2 className="font-headline text-2xl font-bold">{challenge.title}</h2>
                         </div>
-                        <NeoButton size="icon" variant="secondary" onClick={fetchChallenge} disabled={loading}>
-                            <RefreshCw className="h-5 w-5"/>
-                        </NeoButton>
+                         <div className="flex items-center gap-4">
+                            <ChallengeTimer difficulty={challenge.difficulty} onTimeUp={() => setIsTimeUp(true)} />
+                            <NeoButton size="icon" variant="secondary" onClick={fetchChallenge} disabled={loading}>
+                                <RefreshCw className="h-5 w-5"/>
+                            </NeoButton>
+                        </div>
                     </div>
                 </NeoCardHeader>
                 <NeoCardContent>
@@ -159,26 +199,51 @@ export function CodingChallenge() {
             <NeoCard>
                 <NeoCardHeader>
                     <h3 className="font-headline text-xl font-bold">Your Solution</h3>
+                    <p className="text-sm text-muted-foreground">You can submit your code in any language.</p>
                 </NeoCardHeader>
                 <NeoCardContent>
                     <Textarea 
                         placeholder="Enter your solution here..."
-                        className="min-h-48 border-2 border-foreground font-code"
+                        className="min-h-48 border-2 border-foreground font-code bg-secondary/50 text-base"
                         value={solution}
                         onChange={(e) => setSolution(e.target.value)}
-                        disabled={validating}
+                        disabled={validating || isTimeUp}
                     />
                 </NeoCardContent>
                 <NeoCardFooter className="flex justify-between items-center">
                     <p className="text-xs text-muted-foreground">Submit your code to get it validated by AI.</p>
-                    <NeoButton onClick={handleValidate} disabled={validating}>
+                    <NeoButton onClick={handleValidate} disabled={validating || isTimeUp}>
                         {validating && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                         Validate Solution
                     </NeoButton>
                 </NeoCardFooter>
             </NeoCard>
+
+             {validationResult && (
+                <Alert className={cn("border-2 border-foreground shadow-[4px_4px_0px_hsl(var(--foreground))]", validationResult.isCorrect ? "bg-green-100 border-green-500" : "bg-red-100 border-red-500")}>
+                    {validationResult.isCorrect ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+                    <AlertTitle className="font-headline font-bold text-lg">
+                        {validationResult.isCorrect ? "Correct Solution!" : "Incorrect Solution"}
+                    </AlertTitle>
+                    <AlertDescription className="text-base">
+                        {validationResult.feedback}
+                        {validationResult.isCorrect && (
+                            <p className="font-bold mt-2">You earned {validationResult.pointsAwarded} points!</p>
+                        )}
+                    </AlertDescription>
+                </Alert>
+            )}
+             {isTimeUp && !validationResult && (
+                 <Alert variant="destructive" className="border-2 border-foreground shadow-[4px_4px_0px_hsl(var(--foreground))]">
+                    <TimerIcon className="h-4 w-4" />
+                    <AlertTitle>Time's Up!</AlertTitle>
+                    <AlertDescription>The time for this challenge has expired. Please generate a new challenge to try again.</AlertDescription>
+                </Alert>
+             )}
         </div>
       )}
     </div>
   );
 }
+
+    
