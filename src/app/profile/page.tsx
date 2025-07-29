@@ -1,3 +1,7 @@
+
+"use client";
+
+import * as React from "react";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { NeoCard, NeoCardContent, NeoCardHeader } from "@/components/NeoCard";
@@ -118,5 +122,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
-    
