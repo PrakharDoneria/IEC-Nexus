@@ -17,7 +17,7 @@ import { toast } from "@/hooks/use-toast";
 const MAX_AVATAR_SIZE_MB = 2;
 
 export default function EditProfilePage() {
-  const { user, authLoading, refreshUser } = useAuth();
+  const { user, idToken, authLoading, refreshUser } = useAuth();
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
   const [avatar, setAvatar] = useState("");
@@ -64,7 +64,7 @@ export default function EditProfilePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !user.id) return;
+    if (!user || !idToken) return;
 
     setLoading(true);
     
@@ -73,7 +73,7 @@ export default function EditProfilePage() {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${await user.firebaseUser?.getIdToken()}`
+          'Authorization': `Bearer ${idToken}`
         },
         body: JSON.stringify({ name, bio, avatar })
       });
