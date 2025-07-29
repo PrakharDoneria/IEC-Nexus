@@ -22,33 +22,42 @@ import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
 
-function SinglePostCard({ post: initialPost, onLikeUpdate }: { post: Post, onLikeUpdate: (newLikes: string[], newIsLiked: boolean) => void }) {
+function SinglePostCard({ post: initialPost }: { post: Post }) {
     const { user, idToken } = useAuth();
     const [post, setPost] = React.useState(initialPost);
     const [isLiked, setIsLiked] = React.useState((post.likes || []).includes(user?.id ?? ''));
 
      React.useEffect(() => {
-        setIsLiked((post.likes || []).includes(user?.id ?? ''))
-    }, [user, post.likes]);
+        setPost(initialPost);
+        setIsLiked((initialPost.likes || []).includes(user?.id ?? ''))
+    }, [initialPost, user]);
 
      const handleLike = async () => {
         if (!idToken) return;
-        const originalLikes = post.likes || [];
+
+        const originalPost = post;
         const newIsLiked = !isLiked;
         
-        const newLikes = newIsLiked ? [...originalLikes, user!.id] : originalLikes.filter(id => id !== user!.id);
-        
-        onLikeUpdate(newLikes, newIsLiked);
+        // Optimistic update
+        const newPost = {
+            ...post,
+            likes: newIsLiked 
+                ? [...(post.likes || []), user!.id] 
+                : (post.likes || []).filter(id => id !== user!.id)
+        };
+        setPost(newPost);
         setIsLiked(newIsLiked);
 
         try {
             const response = await fetch(`/api/posts/${post._id}/like`, { method: 'POST', headers: { 'Authorization': `Bearer ${idToken}` } });
             if (!response.ok) throw new Error('Failed to like post');
             const data = await response.json();
-            onLikeUpdate(data.likes, data.isLiked);
+            // Sync with server state
+            setPost(prev => ({ ...prev, likes: data.likes }));
             setIsLiked(data.isLiked);
         } catch (error) {
-            onLikeUpdate(originalLikes, !newIsLiked);
+            // Revert on error
+            setPost(originalPost);
             setIsLiked(!newIsLiked);
             toast({ variant: "destructive", title: "Error", description: "Could not update like." });
         }
@@ -229,12 +238,6 @@ export default function PostPage() {
       fetchPost();
   }
 
-  const handleLikeUpdate = (newLikes: string[]) => {
-      if (post) {
-        setPost({...post, likes: newLikes, commentCount: post.commentCount || 0 });
-      }
-  };
-
   const renderContent = () => {
     if (loading) {
         return <div className="flex-1 flex items-center justify-center"><Loader2 className="h-10 w-10 animate-spin" /></div>;
@@ -256,7 +259,7 @@ export default function PostPage() {
                     <h1 className="text-2xl font-headline font-bold">Post Details</h1>
                 </header>
                 <main className="flex-1 p-4 md:p-6 lg:p-8">
-                    <SinglePostCard post={post} onLikeUpdate={(newLikes) => handleLikeUpdate(newLikes)} />
+                    <SinglePostCard post={post} />
                     <CommentSection postId={postId} onCommentAdded={handlePostUpdate}/>
                 </main>
             </>
