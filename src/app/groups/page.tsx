@@ -1,3 +1,4 @@
+
 import Image from "next/image";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { MobileNav } from "@/components/layout/MobileNav";
@@ -109,7 +110,7 @@ function CreateGroupDialog() {
                     <DialogDescription>
                         Fill in the details to create your own collaboration space.
                     </DialogDescription>
-                </Header>
+                </DialogHeader>
                 <div className="grid gap-4 py-4">
                     <div className="space-y-2">
                         <Label htmlFor="name">Group Name</Label>
