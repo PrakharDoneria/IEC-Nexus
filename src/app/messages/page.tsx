@@ -5,17 +5,15 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Input } from "@/components/ui/input";
-import { NeoButton } from "@/components/NeoButton";
-import { Conversation, Message } from "@/lib/types";
+import { Conversation } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { Search, Send, MessagesSquare, Loader2 } from "lucide-react";
+import { MessagesSquare, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { format, formatDistanceToNow, isToday, isYesterday } from "date-fns";
-import Link from "next/link";
 import { toast } from "@/hooks/use-toast";
-import { useSearchParams } from "next/navigation";
-
+import { useRouter, useSearchParams } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 function formatTimestamp(timestamp: Date | string) {
     const date = new Date(timestamp);
@@ -28,181 +26,47 @@ function formatTimestamp(timestamp: Date | string) {
     return format(date, 'P'); // e.g., 04/10/2024
 }
 
+function ConversationList({ conversations, loading }: { conversations: Conversation[], loading: boolean }) {
+    const router = useRouter();
 
-function ConversationList({ conversations, onSelect, activeConvoId, loading }: { conversations: Conversation[], onSelect: (id: string) => void, activeConvoId: string | null, loading: boolean }) {
     if (loading) {
         return (
-            <div className="border-r-2 border-foreground h-full flex flex-col items-center justify-center">
+            <div className="flex flex-col items-center justify-center h-full">
                 <Loader2 className="h-8 w-8 animate-spin"/>
             </div>
         )
     }
     
-    return (
-        <div className="border-r-2 border-foreground h-full flex flex-col">
-            <div className="p-4 border-b-2 border-foreground">
-                <h2 className="font-headline text-2xl font-bold">Messages</h2>
-                 {/* Search could be implemented in the future */}
-            </div>
-            <div className="flex-1 overflow-y-auto">
-                <nav className="divide-y-2 divide-foreground">
-                   {conversations.length === 0 ? (
-                       <p className="p-4 text-sm text-muted-foreground">No conversations yet. Start one from a user's profile.</p>
-                   ) : (
-                       conversations.map(convo => (
-                           <button key={convo._id?.toString()} onClick={() => onSelect(convo._id!.toString())} className={cn("w-full flex items-center gap-3 p-3 text-left hover:bg-secondary", activeConvoId === convo._id?.toString() && 'bg-secondary')}>
-                               <Avatar>
-                                   <AvatarImage src={convo.participant?.avatar} />
-                                   <AvatarFallback>{convo.participant?.name.charAt(0)}</AvatarFallback>
-                               </Avatar>
-                               <div className="flex-1 overflow-hidden">
-                                   <div className="flex justify-between items-baseline">
-                                     <p className="font-semibold truncate">{convo.participant?.name}</p>
-                                     {convo.lastMessage?.timestamp && <span className="text-xs text-muted-foreground whitespace-nowrap">{formatTimestamp(convo.lastMessage.timestamp)}</span>}
-                                   </div>
-                                   <p className="text-sm text-muted-foreground truncate">{convo.lastMessage?.content}</p>
-                               </div>
-                           </button>
-                       ))
-                   )}
-                </nav>
-            </div>
-        </div>
-    )
-}
-
-function MessageView({ conversationId, onMessageSent }: { conversationId: string | null, onMessageSent: () => void }) {
-    const { user, idToken } = useAuth();
-    const [messages, setMessages] = useState<Message[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [newMessage, setNewMessage] = useState("");
-    const [sending, setSending] = useState(false);
-    const messagesEndRef = useRef<HTMLDivElement>(null);
-    const isFetching = useRef(false);
-
-     const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-    }
-
-    const fetchMessages = useCallback(async (isBackground = false) => {
-        if (!conversationId || isFetching.current) return;
-        isFetching.current = true;
-        if (!isBackground) {
-            setLoading(true);
-        }
-        try {
-            const res = await fetch(`/api/messages/${conversationId}`, {
-                headers: { 'Authorization': `Bearer ${idToken}` }
-            });
-            if (!res.ok) throw new Error("Failed to load messages");
-            const data = await res.json();
-            setMessages(data);
-        } catch (error) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Could not load messages.'});
-        } finally {
-            if (!isBackground) {
-                setLoading(false);
-            }
-            isFetching.current = false;
-        }
-    }, [conversationId, idToken]);
-
-
-    useEffect(() => {
-        if (conversationId) {
-            fetchMessages(false); // Initial fetch shows loader
-
-            // Poll for new messages every 5 seconds
-            const intervalId = setInterval(() => fetchMessages(true), 5000); // Background fetches don't show loader
-
-            return () => clearInterval(intervalId);
-        }
-    }, [conversationId, fetchMessages]);
-
-    useEffect(() => {
-        scrollToBottom();
-    }, [messages]);
-
-
-    const handleSendMessage = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!newMessage.trim() || !conversationId) return;
-
-        setSending(true);
-        try {
-            const res = await fetch(`/api/messages/${conversationId}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
-                body: JSON.stringify({ content: newMessage })
-            });
-            if (!res.ok) throw new Error("Failed to send message");
-            const sentMessage = await res.json();
-            setMessages(prev => [...prev, sentMessage]);
-            setNewMessage("");
-            onMessageSent(); // To refresh conversation list
-        } catch (error) {
-             toast({ variant: 'destructive', title: 'Error', description: 'Could not send message.'});
-        } finally {
-            setSending(false);
-        }
-    }
-
-    if (!conversationId) {
+    if (conversations.length === 0) {
         return (
-            <div className="flex flex-col h-full items-center justify-center text-center p-8">
+            <div className="flex flex-col items-center justify-center text-center p-8 h-full">
                 <MessagesSquare className="h-16 w-16 text-muted-foreground mb-4" />
-                <h3 className="font-headline text-2xl font-bold">Select a Conversation</h3>
-                <p className="text-muted-foreground max-w-sm mx-auto">
-                    Choose a conversation from the list on the left to start chatting.
+                <h3 className="font-headline text-2xl font-bold">No Conversations</h3>
+                <p className="text-muted-foreground max-w-sm mx-auto mt-2">
+                    You haven't started any conversations yet. Find someone to chat with on their profile page.
                 </p>
             </div>
         )
     }
 
-     if (loading && messages.length === 0) {
-        return (
-            <div className="flex flex-col h-full items-center justify-center">
-                 <Loader2 className="h-8 w-8 animate-spin"/>
-            </div>
-        )
-    }
-
     return (
-        <div className="flex flex-col h-full bg-secondary">
-           <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {messages.map((msg) => (
-                  <div key={msg._id?.toString()} className={cn("flex items-end gap-2", msg.senderId === user?.id ? "justify-end" : "justify-start")}>
-                      {msg.senderId !== user?.id && (
-                          <Avatar className="h-8 w-8">
-                              <AvatarImage src={msg.sender?.avatar} />
-                              <AvatarFallback>{msg.sender?.name.charAt(0)}</AvatarFallback>
-                          </Avatar>
-                      )}
-                      <div className={cn(
-                          "max-w-xs md:max-w-md lg:max-w-lg p-3 rounded-xl border-2 border-foreground", 
-                          msg.senderId === user?.id ? "bg-primary text-primary-foreground rounded-br-none" : "bg-card rounded-bl-none"
-                        )}>
-                          <p className="whitespace-pre-wrap">{msg.content}</p>
-                      </div>
-                  </div>
-              ))}
-              <div ref={messagesEndRef} />
-           </div>
-           <form onSubmit={handleSendMessage} className="p-4 border-t-2 border-foreground bg-card">
-               <div className="flex gap-2">
-                   <Input 
-                        placeholder="Type a message..." 
-                        className="border-2 border-foreground"
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        disabled={sending}
-                    />
-                   <NeoButton type="submit" size="icon" disabled={sending}>
-                       {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5"/>}
-                   </NeoButton>
-               </div>
-           </form>
-        </div>
+        <nav className="divide-y-2 divide-foreground border-r-2 border-foreground">
+           {conversations.map(convo => (
+               <Link key={convo._id?.toString()} href={`/messages/${convo._id!.toString()}`} className="w-full flex items-center gap-3 p-3 text-left hover:bg-secondary">
+                   <Avatar>
+                       <AvatarImage src={convo.participant?.avatar} />
+                       <AvatarFallback>{convo.participant?.name.charAt(0)}</AvatarFallback>
+                   </Avatar>
+                   <div className="flex-1 overflow-hidden">
+                       <div className="flex justify-between items-baseline">
+                         <p className="font-semibold truncate">{convo.participant?.name}</p>
+                         {convo.lastMessage?.timestamp && <span className="text-xs text-muted-foreground whitespace-nowrap">{formatTimestamp(convo.lastMessage.timestamp)}</span>}
+                       </div>
+                       <p className="text-sm text-muted-foreground truncate">{convo.lastMessage?.content}</p>
+                   </div>
+               </Link>
+           ))}
+        </nav>
     )
 }
 
@@ -210,8 +74,8 @@ function MessageView({ conversationId, onMessageSent }: { conversationId: string
 export default function MessagesPage() {
     const { user, idToken, authLoading } = useAuth();
     const searchParams = useSearchParams();
+    const router = useRouter();
     const [conversations, setConversations] = useState<Conversation[]>([]);
-    const [activeConvoId, setActiveConvoId] = useState<string | null>(null);
     const [loadingConvos, setLoadingConvos] = useState(true);
     const isFetchingConvos = useRef(false);
 
@@ -230,7 +94,7 @@ export default function MessagesPage() {
         } catch (error) {
             toast({ variant: 'destructive', title: 'Error', description: 'Could not load conversations.' });
         } finally {
-            setLoadingConvos(false);
+            if(!isBackground) setLoadingConvos(false);
             isFetchingConvos.current = false;
         }
     }, [idToken]);
@@ -252,13 +116,11 @@ export default function MessagesPage() {
                     });
                      if (!res.ok) throw new Error('Failed to start conversation');
                     const data = await res.json();
-                    setActiveConvoId(data.conversationId);
-                    await fetchConversations(true); // Fetch in background
+                    router.replace(`/messages/${data.conversationId}`); // Go to the chat page
                 } catch (error) {
                      toast({ variant: 'destructive', title: 'Error', description: 'Could not start conversation.' });
-                } finally {
-                    setLoadingConvos(false);
-                }
+                     fetchConversations(); // Fetch conversations normally if starting one fails
+                } 
             } else {
                  fetchConversations();
             }
@@ -268,9 +130,9 @@ export default function MessagesPage() {
             startOrSelectConversation();
         }
 
-    }, [searchParams, idToken, fetchConversations, authLoading, user]);
+    }, [searchParams, idToken, fetchConversations, authLoading, user, router]);
 
-    if (authLoading || (loadingConvos && conversations.length === 0)) {
+    if (authLoading || (loadingConvos && conversations.length === 0 && !searchParams.get('recipient'))) {
         return (
              <div className="flex min-h-screen bg-background">
                 <AppSidebar />
@@ -286,13 +148,13 @@ export default function MessagesPage() {
             <AppSidebar />
             <div className="flex-1 flex flex-col">
                 <MobileNav />
-                <main className="flex-1 grid grid-cols-1 md:grid-cols-[350px_1fr] h-[calc(100vh-64px)]">
-                    <ConversationList conversations={conversations} onSelect={setActiveConvoId} activeConvoId={activeConvoId} loading={loadingConvos} />
-                    <MessageView conversationId={activeConvoId} onMessageSent={() => fetchConversations(true)} />
+                 <header className="hidden md:flex h-16 items-center border-b-2 border-foreground bg-card px-4 md:px-6">
+                    <h1 className="text-2xl font-headline font-bold">Messages</h1>
+                </header>
+                <main className="flex-1 overflow-y-auto">
+                    <ConversationList conversations={conversations} loading={loadingConvos} />
                 </main>
             </div>
         </div>
     );
 }
-
-    

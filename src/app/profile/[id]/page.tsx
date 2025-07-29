@@ -226,6 +226,7 @@ export default function ProfilePage() {
               <div className="flex-1">
                   <h1 className="font-headline text-3xl sm:text-4xl font-bold">{profileUser.name}</h1>
                   <p className="text-muted-foreground text-base sm:text-lg">@{profileUser.name.toLowerCase().replace(' ', '').replace('.', '')}</p>
+                   <p className="mt-2 text-base">{profileUser.bio}</p>
                   <div className="flex gap-4 mt-2 text-sm">
                       <span className="font-bold">{profileUser.following?.length || 0}</span> Following
                       <span className="font-bold">{profileUser.followers?.length || 0}</span> Followers

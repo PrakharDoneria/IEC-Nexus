@@ -45,6 +45,7 @@ export async function GET(req: NextRequest, { params }: { params: { conversation
             {
                 $project: {
                     content: 1,
+                    imageUrl: 1,
                     timestamp: 1,
                     senderId: 1,
                     sender: {
@@ -56,8 +57,11 @@ export async function GET(req: NextRequest, { params }: { params: { conversation
             }
         ])
         .toArray();
+        
+    const otherParticipantId = conversation.participants.find((p: string) => p !== userId);
+    const participantDetails = await db.collection('users').findOne({ id: otherParticipantId });
 
-    return NextResponse.json(messages);
+    return NextResponse.json({ messages, participant: participantDetails });
 
   } catch (error) {
     console.error('Error fetching messages:', error);
@@ -83,8 +87,8 @@ export async function POST(req: NextRequest, { params }: { params: { conversatio
         }
         const conversationId = new ObjectId(params.conversationId);
         
-        const { content } = await req.json();
-        if (!content) {
+        const { content, imageUrl } = await req.json();
+        if (!content && !imageUrl) {
             return NextResponse.json({ message: 'Message content cannot be empty' }, { status: 400 });
         }
 
@@ -100,16 +104,18 @@ export async function POST(req: NextRequest, { params }: { params: { conversatio
         const newMessage = {
             conversationId,
             senderId,
-            content,
+            content: content || "",
+            imageUrl: imageUrl || null,
             timestamp: new Date(),
         };
 
         const result = await db.collection('messages').insertOne(newMessage);
 
         // Update the conversation with the last message
+        const lastMessageContent = content || 'Image';
         await db.collection('conversations').updateOne(
             { _id: conversationId },
-            { $set: { lastMessage: { _id: result.insertedId, content, timestamp: newMessage.timestamp, senderId } } }
+            { $set: { lastMessage: { _id: result.insertedId, content: lastMessageContent, timestamp: newMessage.timestamp, senderId } } }
         );
 
         // Fetch the sent message with sender info to return
@@ -127,6 +133,7 @@ export async function POST(req: NextRequest, { params }: { params: { conversatio
             {
                 $project: {
                     content: 1,
+                    imageUrl: 1,
                     timestamp: 1,
                     senderId: 1,
                     sender: {

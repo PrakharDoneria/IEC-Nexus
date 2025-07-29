@@ -7,6 +7,7 @@ export type User = {
   name: string;
   email: string;
   avatar: string;
+  bio?: string;
   role: 'Student' | 'Faculty';
   fcmToken?: string;
   following?: string[];
@@ -50,6 +51,7 @@ export type Message = {
     conversationId: ObjectId;
     senderId: string;
     content: string;
+    imageUrl?: string; // For image messages
     timestamp: Date;
     sender?: User; // populated
 };
@@ -58,7 +60,7 @@ export type Conversation = {
     _id?: ObjectId;
     participants: string[]; // array of user IDs
     lastMessage?: Message;
-    participantDetails?: User[]; // populated
+    participant: User; // populated
 };
 
 

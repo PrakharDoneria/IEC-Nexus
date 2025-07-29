@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { MobileNav } from "@/components/layout/MobileNav";
@@ -9,14 +9,28 @@ import { NeoCard, NeoCardContent, NeoCardHeader, NeoCardFooter } from "@/compone
 import { NeoButton } from "@/components/NeoButton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Loader2, Camera } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+
+const MAX_AVATAR_SIZE_MB = 2;
 
 export default function EditProfilePage() {
-  const { user, authLoading } = useAuth();
-  const [name, setName] = useState(user?.name || "");
-  const [avatar, setAvatar] = useState(user?.avatar || "");
+  const { user, authLoading, refreshUser } = useAuth();
+  const [name, setName] = useState("");
+  const [bio, setBio] = useState("");
+  const [avatar, setAvatar] = useState("");
   const [loading, setLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (user) {
+      setName(user.name);
+      setBio(user.bio || "");
+      setAvatar(user.avatar);
+    }
+  }, [user]);
 
   if (authLoading || !user) {
     return (
@@ -28,21 +42,62 @@ export default function EditProfilePage() {
       </div>
     );
   }
-
-  const handleAvatarChange = () => {
-    // This would typically open a file picker
-    alert("Avatar changing functionality is not implemented yet.");
+  
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > MAX_AVATAR_SIZE_MB * 1024 * 1024) {
+        toast({
+          variant: "destructive",
+          title: "Image Too Large",
+          description: `Please select an image smaller than ${MAX_AVATAR_SIZE_MB}MB.`
+        });
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatar(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user || !user.id) return;
+
     setLoading(true);
-    console.log("Updating profile...", { name, avatar });
-    // Simulate API call
-    setTimeout(() => {
+    
+    try {
+       const res = await fetch(`/api/users/current`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${await user.firebaseUser?.getIdToken()}`
+        },
+        body: JSON.stringify({ name, bio, avatar })
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || 'Failed to update profile');
+      }
+
+      await refreshUser();
+      toast({
+        title: "Profile Updated",
+        description: "Your changes have been saved successfully."
+      });
+
+    } catch (error: any) {
+        toast({
+          variant: "destructive",
+          title: "Update Failed",
+          description: error.message
+        });
+    } finally {
       setLoading(false);
-      alert("Profile updated successfully! (Simulation)");
-    }, 1500);
+    }
   };
 
   return (
@@ -71,7 +126,14 @@ export default function EditProfilePage() {
                         <AvatarImage src={avatar} data-ai-hint="user avatar" />
                         <AvatarFallback>{name.charAt(0)}</AvatarFallback>
                       </Avatar>
-                      <NeoButton type="button" variant="secondary" onClick={handleAvatarChange}>
+                      <input 
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleAvatarChange}
+                        accept="image/png, image/jpeg"
+                        className="hidden"
+                      />
+                      <NeoButton type="button" variant="secondary" onClick={() => fileInputRef.current?.click()}>
                         <Camera className="mr-2 h-4 w-4" />
                         Change Avatar
                       </NeoButton>
@@ -85,6 +147,18 @@ export default function EditProfilePage() {
                       onChange={(e) => setName(e.target.value)}
                       className="border-2 border-foreground"
                     />
+                  </div>
+                   <div className="space-y-2">
+                    <Label htmlFor="bio">Bio</Label>
+                    <Textarea
+                      id="bio"
+                      value={bio}
+                      onChange={(e) => setBio(e.target.value)}
+                      className="border-2 border-foreground"
+                      placeholder="Tell us a bit about yourself"
+                      maxLength={150}
+                    />
+                    <p className="text-xs text-muted-foreground text-right">{bio.length} / 150</p>
                   </div>
                    <div className="space-y-2">
                     <Label htmlFor="email">Email Address</Label>
