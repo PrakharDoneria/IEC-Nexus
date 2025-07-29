@@ -78,14 +78,18 @@ function MessageView({ conversationId, onMessageSent }: { conversationId: string
     const [newMessage, setNewMessage] = useState("");
     const [sending, setSending] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const isFetching = useRef(false);
 
      const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
     }
 
-    const fetchMessages = useCallback(async () => {
-        if (!conversationId) return;
-        setLoading(true);
+    const fetchMessages = useCallback(async (isBackground = false) => {
+        if (!conversationId || isFetching.current) return;
+        isFetching.current = true;
+        if (!isBackground) {
+            setLoading(true);
+        }
         try {
             const res = await fetch(`/api/messages/${conversationId}`, {
                 headers: { 'Authorization': `Bearer ${idToken}` }
@@ -96,17 +100,20 @@ function MessageView({ conversationId, onMessageSent }: { conversationId: string
         } catch (error) {
             toast({ variant: 'destructive', title: 'Error', description: 'Could not load messages.'});
         } finally {
-            setLoading(false);
+            if (!isBackground) {
+                setLoading(false);
+            }
+            isFetching.current = false;
         }
     }, [conversationId, idToken]);
 
 
     useEffect(() => {
         if (conversationId) {
-            fetchMessages();
+            fetchMessages(false); // Initial fetch shows loader
 
             // Poll for new messages every 5 seconds
-            const intervalId = setInterval(fetchMessages, 5000);
+            const intervalId = setInterval(() => fetchMessages(true), 5000); // Background fetches don't show loader
 
             return () => clearInterval(intervalId);
         }
@@ -206,10 +213,13 @@ export default function MessagesPage() {
     const [conversations, setConversations] = useState<Conversation[]>([]);
     const [activeConvoId, setActiveConvoId] = useState<string | null>(null);
     const [loadingConvos, setLoadingConvos] = useState(true);
+    const isFetchingConvos = useRef(false);
 
-    const fetchConversations = useCallback(async () => {
-        if (!idToken) return;
-        setLoadingConvos(true);
+    const fetchConversations = useCallback(async (isBackground = false) => {
+        if (!idToken || isFetchingConvos.current) return;
+        isFetchingConvos.current = true;
+        if(!isBackground) setLoadingConvos(true);
+
         try {
             const res = await fetch('/api/messages', {
                 headers: { 'Authorization': `Bearer ${idToken}` }
@@ -221,6 +231,7 @@ export default function MessagesPage() {
             toast({ variant: 'destructive', title: 'Error', description: 'Could not load conversations.' });
         } finally {
             setLoadingConvos(false);
+            isFetchingConvos.current = false;
         }
     }, [idToken]);
 
@@ -229,6 +240,7 @@ export default function MessagesPage() {
 
         const startOrSelectConversation = async () => {
             if (recipientId && idToken && user && recipientId !== user.id) {
+                setLoadingConvos(true);
                 try {
                     const res = await fetch('/api/messages', {
                         method: 'POST',
@@ -241,22 +253,24 @@ export default function MessagesPage() {
                      if (!res.ok) throw new Error('Failed to start conversation');
                     const data = await res.json();
                     setActiveConvoId(data.conversationId);
-                    await fetchConversations();
+                    await fetchConversations(true); // Fetch in background
                 } catch (error) {
                      toast({ variant: 'destructive', title: 'Error', description: 'Could not start conversation.' });
+                } finally {
+                    setLoadingConvos(false);
                 }
             } else {
                  fetchConversations();
             }
         };
 
-        if(!authLoading) {
+        if(!authLoading && idToken) {
             startOrSelectConversation();
         }
 
     }, [searchParams, idToken, fetchConversations, authLoading, user]);
 
-    if (authLoading) {
+    if (authLoading || (loadingConvos && conversations.length === 0)) {
         return (
              <div className="flex min-h-screen bg-background">
                 <AppSidebar />
@@ -274,7 +288,7 @@ export default function MessagesPage() {
                 <MobileNav />
                 <main className="flex-1 grid grid-cols-1 md:grid-cols-[350px_1fr] h-[calc(100vh-64px)]">
                     <ConversationList conversations={conversations} onSelect={setActiveConvoId} activeConvoId={activeConvoId} loading={loadingConvos} />
-                    <MessageView conversationId={activeConvoId} onMessageSent={fetchConversations} />
+                    <MessageView conversationId={activeConvoId} onMessageSent={() => fetchConversations(true)} />
                 </main>
             </div>
         </div>

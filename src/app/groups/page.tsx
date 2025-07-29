@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Image from "next/image";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { MobileNav } from "@/components/layout/MobileNav";
@@ -181,10 +181,15 @@ export default function GroupsPage() {
     const [groups, setGroups] = useState<Group[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const isFetching = useRef(false);
 
-    const fetchGroups = async () => {
-        setLoading(true);
+    const fetchGroups = useCallback(async (isBackground = false) => {
+        if(isFetching.current) return;
+        isFetching.current = true;
+
+        if(!isBackground) setLoading(true);
         setError(null);
+
         try {
             const res = await fetch('/api/groups');
             if (!res.ok) throw new Error("Failed to fetch groups");
@@ -194,13 +199,14 @@ export default function GroupsPage() {
             setError(err.message);
             toast({ variant: 'destructive', title: 'Error', description: 'Could not load groups.' });
         } finally {
-            setLoading(false);
+            if(!isBackground) setLoading(false);
+            isFetching.current = false;
         }
-    };
+    }, []);
 
     useEffect(() => {
         fetchGroups();
-    }, []);
+    }, [fetchGroups]);
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -210,8 +216,8 @@ export default function GroupsPage() {
         <header className="flex h-16 items-center justify-between border-b-2 border-foreground bg-card px-4 md:px-6">
             <h1 className="text-2xl font-headline font-bold">Groups</h1>
             <div className="flex items-center gap-2 sm:gap-4">
-                <JoinGroupDialog onGroupJoined={fetchGroups} />
-                <CreateGroupDialog onGroupCreated={fetchGroups} />
+                <JoinGroupDialog onGroupJoined={() => fetchGroups(true)} />
+                <CreateGroupDialog onGroupCreated={() => fetchGroups(true)} />
             </div>
         </header>
         <main className="flex-1 p-4 md:p-6 lg:p-8">
@@ -233,3 +239,5 @@ export default function GroupsPage() {
     </div>
   );
 }
+
+    

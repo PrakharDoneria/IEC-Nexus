@@ -25,30 +25,30 @@ import { Textarea } from '@/components/ui/textarea';
 function SinglePostCard({ post: initialPost, onDelete }: { post: Post, onDelete: () => void }) {
     const { user, idToken } = useAuth();
     const [post, setPost] = React.useState(initialPost);
-    const [isLiked, setIsLiked] = React.useState((post.likes || []).includes(user?.id ?? ''));
+    const [isLiked, setIsLiked] = React.useState(false);
     const [isDeleting, setIsDeleting] = React.useState(false);
 
      React.useEffect(() => {
         setPost(initialPost);
-        setIsLiked((initialPost.likes || []).includes(user?.id ?? ''))
+        if (initialPost && user) {
+            setIsLiked((initialPost.likes || []).includes(user.id));
+        }
     }, [initialPost, user]);
 
      const handleLike = async () => {
-        if (!idToken) return;
+        if (!idToken || !user) return;
 
-        const originalPost = post;
+        const originalPost = { ...post };
         const newIsLiked = !isLiked;
-        
-        const newLikesCount = newIsLiked ? (post.likes || []).length + 1 : (post.likes || []).length - 1;
 
         // Optimistic update
-        const newPost = {
-            ...post,
-            likes: newIsLiked 
-                ? [...(post.likes || []), user!.id] 
-                : (post.likes || []).filter(id => id !== user!.id)
-        };
-        setPost(newPost);
+        setPost(prev => {
+            const currentLikes = prev.likes || [];
+            const newLikes = newIsLiked
+                ? [...currentLikes, user.id]
+                : currentLikes.filter(id => id !== user.id);
+            return { ...prev, likes: newLikes };
+        });
         setIsLiked(newIsLiked);
 
         try {
@@ -247,7 +247,7 @@ export default function PostPage() {
 
   const fetchPost = React.useCallback(async () => {
     if (postId) {
-      setLoading(true);
+      if (!post) setLoading(true); // Only show full loader on initial load
       setError(null);
       try {
         const res = await fetch(`/api/posts/${postId}`);
@@ -262,11 +262,11 @@ export default function PostPage() {
         setLoading(false);
       }
     }
-  }, [postId]);
+  }, [postId, post]);
 
   React.useEffect(() => {
     fetchPost();
-  }, [fetchPost]);
+  }, [postId]); // removed fetchPost from dependency array to avoid re-running on post state change
 
   const handlePostUpdate = () => {
       fetchPost();
@@ -316,3 +316,5 @@ export default function PostPage() {
     </div>
   );
 }
+
+    

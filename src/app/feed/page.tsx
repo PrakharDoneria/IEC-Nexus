@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { AppSidebar } from '@/components/layout/AppSidebar';
@@ -170,6 +170,11 @@ function PostCard({ post: initialPost, currentUser, onDelete }: { post: Post; cu
   const [post, setPost] = useState(initialPost);
   const [isLiked, setIsLiked] = useState((post.likes || []).includes(currentUser?.id));
   const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    setPost(initialPost);
+    setIsLiked((initialPost.likes || []).includes(currentUser?.id));
+  }, [initialPost, currentUser]);
 
   const formattedTimestamp = formatDistanceToNow(new Date(post.timestamp), { addSuffix: true });
 
@@ -407,10 +412,15 @@ export default function FeedPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { user, authLoading } = useAuth();
+  const isFetching = useRef(false);
 
+  const fetchPosts = useCallback(async (isBackground = false) => {
+    if (isFetching.current) return;
+    isFetching.current = true;
 
-  const fetchPosts = useCallback(async () => {
-    setLoading(true);
+    if (!isBackground) {
+        setLoading(true);
+    }
     setError(null);
     try {
       const response = await fetch('/api/posts');
@@ -424,6 +434,7 @@ export default function FeedPage() {
       console.error(err);
     } finally {
       setLoading(false);
+      isFetching.current = false;
     }
   }, []);
 
@@ -441,7 +452,7 @@ export default function FeedPage() {
   };
 
 
-  if (authLoading) {
+  if (authLoading || (loading && posts.length === 0)) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin" />
@@ -466,7 +477,7 @@ export default function FeedPage() {
             <div className="flex-1 space-y-6">
                 <CreatePost onAddPost={handleAddPost} />
                 <div className="space-y-6">
-                    {loading && <div className="text-center p-8"><Loader2 className="h-8 w-8 animate-spin mx-auto"/></div>}
+                    {loading && posts.length === 0 && <div className="text-center p-8"><Loader2 className="h-8 w-8 animate-spin mx-auto"/></div>}
                     {error && <div className="text-center p-8 text-destructive">{error}</div>}
                     {!loading && !error && posts.map(post => <PostCard key={post._id?.toString()} post={post} currentUser={user} onDelete={handleDeletePost} />)}
                 </div>
@@ -477,3 +488,5 @@ export default function FeedPage() {
     </div>
   );
 }
+
+    
