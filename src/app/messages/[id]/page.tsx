@@ -23,6 +23,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useUnreadCount } from "@/hooks/useUnreadCount";
 
 const MAX_IMAGE_SIZE_MB = 5;
 
@@ -59,6 +60,7 @@ export default function ChatPage() {
     const params = useParams();
     const router = useRouter();
     const conversationId = params.id as string;
+    const { fetchUnreadCount } = useUnreadCount();
     
     const [messages, setMessages] = useState<Message[]>([]);
     const [participant, setParticipant] = useState<User | null>(null);
@@ -91,6 +93,7 @@ export default function ChatPage() {
             const data = await res.json();
             setMessages(data.messages);
             setParticipant(data.participant);
+            fetchUnreadCount(); // Refresh total unread count after marking as read
         } catch (error) {
             toast({ variant: 'destructive', title: 'Error', description: 'Could not load messages.'});
             router.push('/messages');
@@ -100,7 +103,7 @@ export default function ChatPage() {
             }
             isFetching.current = false;
         }
-    }, [conversationId, idToken, router]);
+    }, [conversationId, idToken, router, fetchUnreadCount]);
 
 
     useEffect(() => {
@@ -193,9 +196,11 @@ export default function ChatPage() {
         if (!idToken) return;
 
         if (action === 'edit') {
+            if (message.senderId !== user?.id) return;
             setEditingMessage(message);
             setNewMessage(message.content);
         } else if (action === 'delete') {
+            if (message.senderId !== user?.id) return;
             if (!confirm("Are you sure you want to delete this message?")) return;
             try {
                 const res = await fetch(`/api/messages/${conversationId}/${message._id}`, {
@@ -261,12 +266,13 @@ export default function ChatPage() {
                     </Link>
                 </header>
 
-                <main className="flex-1 overflow-y-auto p-4 space-y-2 bg-secondary/50">
+                <main className="flex-1 overflow-y-auto p-4 space-y-2 bg-secondary/50 pb-24 md:pb-4">
                     {messages.map((msg, index) => {
                         const isOwnMessage = msg.senderId === user?.id;
+                        const canPerformAction = msg.senderId === user?.id;
                         return (
                             <div key={msg._id?.toString() || index} className={cn("flex items-end gap-2 group", isOwnMessage ? "justify-end" : "justify-start")}>
-                                {isOwnMessage && <div className="opacity-0 group-hover:opacity-100 transition-opacity"><MessageActions message={msg} onAction={(action) => handleMessageAction(msg, action)}/></div>}
+                                {isOwnMessage && canPerformAction && <div className="opacity-0 group-hover:opacity-100 transition-opacity"><MessageActions message={msg} onAction={(action) => handleMessageAction(msg, action)}/></div>}
                                 {!isOwnMessage && (
                                     <Avatar className="h-8 w-8 self-start">
                                         <AvatarImage src={msg.sender?.avatar} />
@@ -295,7 +301,7 @@ export default function ChatPage() {
                     <div ref={messagesEndRef} />
                 </main>
 
-                <footer className="p-4 border-t-2 border-foreground bg-card shrink-0">
+                <footer className="p-4 border-t-2 border-foreground bg-card shrink-0 fixed bottom-16 md:relative md:bottom-0 w-full">
                      {editingMessage && (
                         <div className="flex items-center justify-between bg-secondary p-2 rounded-md mb-2 border border-foreground">
                             <div>

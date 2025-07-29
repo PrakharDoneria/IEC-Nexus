@@ -1,7 +1,9 @@
+
 import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 import { AuthProvider } from '@/hooks/useAuth';
+import { UnreadCountProvider } from '@/hooks/useUnreadCount';
 
 export const metadata: Metadata = {
   title: 'IEC Nexus',
@@ -22,7 +24,9 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <AuthProvider>
-          {children}
+          <UnreadCountProvider>
+            {children}
+          </UnreadCountProvider>
         </AuthProvider>
         <Toaster />
       </body>

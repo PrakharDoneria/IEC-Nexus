@@ -9,6 +9,7 @@ import type { User } from '@/lib/types';
 import { useRouter, usePathname } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { toast } from './use-toast';
+import { useUnreadCount } from './useUnreadCount';
 
 interface AuthContextType {
   user: User | null;
@@ -98,6 +99,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 title: payload.notification?.title,
                 description: payload.notification?.body,
             });
+            // Ideally, you would have a global state or context to update the unread count here
         });
         return () => {
             unsubscribe();

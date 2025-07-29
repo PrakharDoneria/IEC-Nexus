@@ -32,11 +32,24 @@ export async function GET(req: NextRequest) {
                     as: 'participantDetails'
                 }
             },
+            {
+                $lookup: {
+                    from: 'messages',
+                    let: { conversationId: '$_id'},
+                    pipeline: [
+                         { $match: { $expr: { $and: [ { $eq: ['$conversationId', '$$conversationId'] }, { $not: { $in: [userId, '$readBy'] } } ] } } },
+                         { $count: 'count' }
+                    ],
+                    as: 'unreadInfo'
+                }
+            },
             { $unwind: { path: '$participantDetails', preserveNullAndEmptyArrays: true } },
+            { $unwind: { path: '$unreadInfo', preserveNullAndEmptyArrays: true } },
             { $project: {
                 _id: 1,
                 lastMessage: 1,
-                participant: '$participantDetails'
+                participant: '$participantDetails',
+                unreadCount: { $ifNull: [ '$unreadInfo.count', 0] }
             }}
         ])
         .toArray();

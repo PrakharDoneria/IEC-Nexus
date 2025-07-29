@@ -48,6 +48,7 @@ export async function POST(req: NextRequest) {
       avatar: `https://placehold.co/100x100/A7C4D3/000000?text=${name.charAt(0)}`,
       following: [],
       followers: [],
+      score: 0,
     };
 
     await usersCollection.insertOne(newUser);

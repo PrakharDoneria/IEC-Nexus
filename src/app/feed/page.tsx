@@ -463,7 +463,7 @@ export default function FeedPage() {
   return (
     <div className="flex min-h-screen bg-background">
       <AppSidebar />
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col pb-16 md:pb-0">
         <MobileNav />
         <header className="hidden md:flex h-16 items-center justify-between gap-4 border-b-2 border-foreground bg-card px-4 md:px-6">
             <div className="flex-1">
@@ -488,5 +488,3 @@ export default function FeedPage() {
     </div>
   );
 }
-
-    

@@ -16,7 +16,13 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       return NextResponse.json({ message: 'User not found' }, { status: 404 });
     }
 
-    const { _id, ...userWithoutMongoId } = user;
+    // Ensure score is a number, default to 0 if not present
+    const userWithScore = {
+        ...user,
+        score: user.score || 0,
+    };
+
+    const { _id, ...userWithoutMongoId } = userWithScore;
 
     return NextResponse.json(userWithoutMongoId);
   } catch (error) {

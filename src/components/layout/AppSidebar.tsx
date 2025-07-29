@@ -4,7 +4,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Users, LayoutDashboard, MessageSquare, User, BookOpen, LogOut, Settings, PanelLeftClose, PanelLeftOpen, Code } from 'lucide-react';
+import { Users, LayoutDashboard, MessageSquare, User, BookOpen, LogOut, Settings, PanelLeftClose, PanelLeftOpen, Code, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
@@ -15,12 +15,14 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { useAuth } from '@/hooks/useAuth';
+import { useUnreadCount } from '@/hooks/useUnreadCount';
+import { Badge } from '../ui/badge';
 
 const navItems = [
   { href: '/feed', icon: LayoutDashboard, label: 'Feed' },
-  { href: '/messages', icon: MessageSquare, label: 'Messages' },
+  { href: '/messages', icon: MessageSquare, label: 'Messages', requiresBadge: true },
   { href: '/groups', icon: Users, label: 'Groups' },
-  { href: '/resources', icon: BookOpen, label: 'Resources' },
+  { href: '/leaderboard', icon: Trophy, label: 'Leaderboard' },
   { href: '/challenge', icon: Code, label: 'Challenge' },
   { href: '/profile', icon: User, label: 'Profile' },
 ];
@@ -28,6 +30,7 @@ const navItems = [
 const NavLink = ({ item, isCollapsed }: { item: typeof navItems[0], isCollapsed: boolean }) => {
   const pathname = usePathname();
   const { user } = useAuth();
+  const { totalUnreadCount } = useUnreadCount();
 
   // Special handling for profile link
   const href = item.href === '/profile' && user ? `/profile/${user.id}` : item.href;
@@ -40,6 +43,10 @@ const NavLink = ({ item, isCollapsed }: { item: typeof navItems[0], isCollapsed:
      isActive = pathname.startsWith('/settings');
   } else if (item.href === '/challenge') {
     isActive = pathname.startsWith('/challenge');
+  } else if (item.href === '/messages') {
+    isActive = pathname.startsWith('/messages');
+  } else if (item.href === '/leaderboard') {
+    isActive = pathname.startsWith('/leaderboard');
   }
 
 
@@ -47,13 +54,22 @@ const NavLink = ({ item, isCollapsed }: { item: typeof navItems[0], isCollapsed:
     <Link
       href={href}
       className={cn(
-        'flex items-center gap-3 rounded-md px-3 py-2 text-muted-foreground transition-colors hover:text-foreground hover:bg-secondary',
+        'flex items-center gap-3 rounded-md px-3 py-2 text-muted-foreground transition-colors hover:text-foreground hover:bg-secondary relative',
         isActive && 'bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground',
         isCollapsed ? 'justify-center' : ''
       )}
     >
       <item.icon className="h-5 w-5" />
-      {!isCollapsed && <span className="font-medium">{item.label}</span>}
+      {!isCollapsed && <span className="font-medium flex-1">{item.label}</span>}
+      {item.requiresBadge && totalUnreadCount > 0 && !isCollapsed && (
+        <Badge variant="destructive" className="h-5">{totalUnreadCount}</Badge>
+      )}
+      {item.requiresBadge && totalUnreadCount > 0 && isCollapsed && (
+        <span className="absolute -top-1 -right-1 flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-destructive"></span>
+        </span>
+      )}
     </Link>
   );
 

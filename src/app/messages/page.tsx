@@ -13,6 +13,8 @@ import { format, formatDistanceToNow, isToday, isYesterday } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { useUnreadCount } from "@/hooks/useUnreadCount";
+import { Badge } from "@/components/ui/badge";
 
 function formatTimestamp(timestamp: Date | string) {
     const date = new Date(timestamp);
@@ -26,8 +28,6 @@ function formatTimestamp(timestamp: Date | string) {
 }
 
 function ConversationList({ conversations, loading, currentUserId }: { conversations: Conversation[], loading: boolean, currentUserId?: string | null }) {
-    const router = useRouter();
-
     if (loading) {
         return (
             <div className="flex flex-col items-center justify-center h-full">
@@ -53,8 +53,7 @@ function ConversationList({ conversations, loading, currentUserId }: { conversat
            {conversations.map(convo => {
                if (!convo.participant) return null; // Skip convos without participant data
 
-               const lastMessage = convo.lastMessage;
-               const isUnread = lastMessage && lastMessage.senderId !== currentUserId && !lastMessage.readBy.includes(currentUserId!);
+               const isUnread = (convo.unreadCount || 0) > 0;
 
                return (
                  <Link key={convo._id?.toString()} href={`/messages/${convo._id!.toString()}`} className="w-full flex items-center gap-3 p-3 text-left hover:bg-secondary">
@@ -69,7 +68,7 @@ function ConversationList({ conversations, loading, currentUserId }: { conversat
                          </div>
                          <p className={cn("text-sm truncate", isUnread ? "text-foreground font-medium" : "text-muted-foreground")}>{convo.lastMessage?.content || '...'}</p>
                      </div>
-                     {isUnread && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
+                     {isUnread && <Badge variant="destructive" className="h-5">{convo.unreadCount}</Badge>}
                  </Link>
                )
             })}
@@ -84,6 +83,8 @@ export default function MessagesPage() {
     const router = useRouter();
     const [conversations, setConversations] = useState<Conversation[]>([]);
     const [loadingConvos, setLoadingConvos] = useState(true);
+    const { conversations: unreadConversations, fetchUnreadCount } = useUnreadCount();
+
     const isFetchingConvos = useRef(false);
 
     const fetchConversations = useCallback(async (isBackground = false) => {
@@ -105,6 +106,18 @@ export default function MessagesPage() {
             isFetchingConvos.current = false;
         }
     }, [idToken]);
+
+    // This merges the unread counts from the context into the main conversation list
+    useEffect(() => {
+        setConversations(prevConvos => {
+            const unreadMap = new Map(unreadConversations.map(c => [c._id?.toString(), c.unreadCount]));
+            return prevConvos.map(convo => ({
+                ...convo,
+                unreadCount: unreadMap.get(convo._id?.toString()) || 0,
+            }));
+        });
+    }, [unreadConversations]);
+
 
     useEffect(() => {
         const recipientId = searchParams.get('recipient');
@@ -135,9 +148,10 @@ export default function MessagesPage() {
 
         if(!authLoading && idToken) {
             startOrSelectConversation();
+            fetchUnreadCount();
         }
 
-    }, [searchParams, idToken, fetchConversations, authLoading, user, router]);
+    }, [searchParams, idToken, fetchConversations, authLoading, user, router, fetchUnreadCount]);
 
     if (authLoading || (loadingConvos && conversations.length === 0 && !searchParams.get('recipient'))) {
         return (
@@ -153,7 +167,7 @@ export default function MessagesPage() {
     return (
         <div className="flex min-h-screen bg-background">
             <AppSidebar />
-            <div className="flex-1 flex flex-col">
+            <div className="flex-1 flex flex-col pb-16 md:pb-0">
                 <MobileNav />
                  <header className="hidden md:flex h-16 items-center border-b-2 border-foreground bg-card px-4 md:px-6">
                     <h1 className="text-2xl font-headline font-bold">Messages</h1>

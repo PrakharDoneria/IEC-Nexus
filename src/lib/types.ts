@@ -14,6 +14,7 @@ export type User = {
   followers?: string[];
   isBanned?: boolean;
   notificationSettings?: NotificationSettings;
+  score?: number;
 };
 
 export type Comment = {
@@ -70,6 +71,7 @@ export type Conversation = {
     participants: string[]; // array of user IDs
     lastMessage?: Message;
     participant: User; // populated
+    unreadCount?: number; // populated for the current user
 };
 
 

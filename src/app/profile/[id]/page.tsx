@@ -8,7 +8,7 @@ import { MobileNav } from "@/components/layout/MobileNav";
 import { NeoCard, NeoCardContent, NeoCardHeader } from "@/components/NeoCard";
 import { NeoButton } from "@/components/NeoButton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Mail, Briefcase, GraduationCap, UserPlus, UserCheck, ShieldBan, Loader2, Edit, MessageSquare } from "lucide-react";
+import { Mail, Briefcase, GraduationCap, UserPlus, UserCheck, ShieldBan, Loader2, Edit, MessageSquare, Award } from "lucide-react";
 import { Post, User } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -210,7 +210,7 @@ export default function ProfilePage() {
   return (
     <div className="flex min-h-screen bg-background">
       <AppSidebar />
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col pb-16 md:pb-0">
         <MobileNav />
         <main className="flex-1">
           {/* Cover Photo */}
@@ -269,6 +269,10 @@ export default function ProfilePage() {
                                 <GraduationCap className="h-5 w-5 text-muted-foreground"/>
                             )}
                             <span>{profileUser.bio || "At IEC"}</span>
+                        </div>
+                         <div className="flex items-center gap-3">
+                            <Award className="h-5 w-5 text-muted-foreground"/>
+                            <span>{profileUser.score || 0} Points</span>
                         </div>
                     </NeoCardContent>
                 </NeoCard>
