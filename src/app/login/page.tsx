@@ -4,12 +4,15 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { getAuth, signInWithEmailAndPassword, sendEmailVerification, User } from "firebase/auth";
+import app from "@/lib/firebase";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NeoButton } from "@/components/NeoButton";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -17,22 +20,48 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [unverifiedUser, setUnverifiedUser] = useState<User | null>(null);
+
+  const handleResendVerification = async () => {
+    if (!unverifiedUser) return;
+    setLoading(true);
+    try {
+      await sendEmailVerification(unverifiedUser);
+      toast({
+        title: "Verification Email Sent",
+        description: "Please check your inbox to verify your email address.",
+      });
+      setUnverifiedUser(null); 
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error Sending Email",
+        description: "There was a problem sending the verification email. Please try again.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setUnverifiedUser(null);
+    const auth = getAuth(app);
 
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'An error occurred.');
+      if (!user.emailVerified) {
+        setUnverifiedUser(user);
+        toast({
+          variant: "destructive",
+          title: "Email Not Verified",
+          description: "Please verify your email address before logging in.",
+        });
+        setLoading(false);
+        return;
       }
 
       toast({
@@ -40,18 +69,20 @@ export default function LoginPage() {
         description: "Welcome back!",
       });
 
-      // On successful login, Firebase client SDK will persist session.
-      // Redirect to the feed.
       router.push('/feed');
 
     } catch (error: any) {
+      let message = "An error occurred during login.";
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+        message = "Invalid email or password. Please try again.";
+      }
       toast({
         variant: "destructive",
         title: "Login Failed",
-        description: error.message,
+        description: message,
       });
     } finally {
-      setLoading(false);
+      if(!unverifiedUser) setLoading(false);
     }
   };
 
@@ -95,10 +126,18 @@ export default function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
           />
         </div>
-        <NeoButton type="submit" className="w-full" disabled={loading}>
-          {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Login
-        </NeoButton>
+        
+        {unverifiedUser ? (
+          <NeoButton type="button" className="w-full" onClick={handleResendVerification} disabled={loading}>
+            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Resend Verification Email
+          </NeoButton>
+        ) : (
+          <NeoButton type="submit" className="w-full" disabled={loading}>
+            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Login
+          </NeoButton>
+        )}
       </form>
     </AuthCard>
   );

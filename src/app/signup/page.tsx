@@ -3,6 +3,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { getAuth, sendEmailVerification, UserCredential } from "firebase/auth";
+import app from "@/lib/firebase";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +27,7 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
+      // First, hit our own API to create the user in Firebase Auth and MongoDB
       const response = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -36,6 +39,21 @@ export default function SignupPage() {
       if (!response.ok) {
         throw new Error(data.message || 'An error occurred.');
       }
+      
+      // Then, send the verification email from the client
+      const auth = getAuth(app);
+
+      // We need a brief moment for the auth state to be available on the client
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const user = auth.currentUser;
+      if (user) {
+        await sendEmailVerification(user);
+      } else {
+        // This is a fallback and shouldn't happen in a normal flow.
+        // It indicates the client auth state didn't update in time.
+        console.warn("Could not find user on client to send verification email. User must log in to get a new link.");
+      }
 
       toast({
         title: "Account Created",
@@ -43,6 +61,7 @@ export default function SignupPage() {
       });
 
       router.push('/login');
+
     } catch (error: any) {
       toast({
         variant: "destructive",
