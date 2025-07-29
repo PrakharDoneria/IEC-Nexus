@@ -1,12 +1,12 @@
+
 'use client';
 
 import * as React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Users, LayoutDashboard, MessageSquare, User, BookOpen, LogOut, Settings } from 'lucide-react';
+import { Users, LayoutDashboard, MessageSquare, User, BookOpen, LogOut, Settings, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { mockUsers } from '@/lib/mock';
 import { cn } from '@/lib/utils';
 import {
   Tooltip,
@@ -14,6 +14,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { useAuth } from '@/hooks/useAuth';
 
 const navItems = [
   { href: '/feed', icon: LayoutDashboard, label: 'Feed' },
@@ -26,11 +27,18 @@ const navItems = [
 
 const NavLink = ({ item, isCollapsed }: { item: typeof navItems[0], isCollapsed: boolean }) => {
   const pathname = usePathname();
-  const isActive = pathname.startsWith(item.href);
+  const { user } = useAuth();
+
+  // Special handling for profile link
+  const href = item.href === '/profile' && user ? `/profile/${user.id}` : item.href;
+  
+  // Make profile link active on any /profile/[id] page
+  const isActive = item.href === '/profile' ? pathname.startsWith('/profile') : pathname === href;
+
 
   const linkContent = (
     <Link
-      href={item.href}
+      href={href}
       className={cn(
         'flex items-center gap-3 rounded-md px-3 py-2 text-muted-foreground transition-colors hover:text-foreground hover:bg-secondary',
         isActive && 'bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground',
@@ -63,7 +71,7 @@ const NavLink = ({ item, isCollapsed }: { item: typeof navItems[0], isCollapsed:
 
 export function AppSidebar() {
   const [isCollapsed, setIsCollapsed] = React.useState(false);
-  const user = mockUsers[0]; // Mock current user
+  const { user, logout } = useAuth(); 
 
   return (
     <aside className={cn(
@@ -71,7 +79,7 @@ export function AppSidebar() {
       isCollapsed ? "w-20" : "w-64"
     )}>
       <div className="flex-1 flex flex-col gap-y-4">
-        <header className="flex h-16 items-center border-b-2 border-foreground px-4 lg:h-[60px] lg:px-6">
+        <header className={cn("flex h-16 items-center border-b-2 border-foreground px-4", isCollapsed && "justify-center")}>
            <Link href="/feed" className="flex items-center gap-2 font-headline font-semibold">
             <div className="p-2 bg-primary border-2 border-foreground rounded-md">
               <Users className="h-6 w-6 text-primary-foreground" />
@@ -87,28 +95,26 @@ export function AppSidebar() {
         </nav>
       </div>
 
-      <div className="mt-auto p-4 space-y-4 border-t-2 border-foreground">
+      <div className="mt-auto p-4 space-y-2 border-t-2 border-foreground">
         <div className={cn("flex items-center gap-3", isCollapsed ? "justify-center" : "")}>
           <Avatar className="h-10 w-10 border-2 border-foreground">
-            <AvatarImage src={user.avatar} alt={user.name} data-ai-hint="user avatar" />
-            <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+            <AvatarImage src={user?.avatar} alt={user?.name} data-ai-hint="user avatar" />
+            <AvatarFallback>{user?.name?.charAt(0)}</AvatarFallback>
           </Avatar>
-          {!isCollapsed && (
-            <div className="flex-1">
-              <p className="font-semibold">{user.name}</p>
+          {!isCollapsed && user && (
+            <div className="flex-1 overflow-hidden">
+              <p className="font-semibold truncate">{user.name}</p>
               <p className="text-xs text-muted-foreground">{user.role}</p>
             </div>
           )}
         </div>
          <Button variant="ghost" size={isCollapsed ? "icon" : "default"} className="w-full justify-start gap-3" onClick={() => setIsCollapsed(!isCollapsed)}>
-          <Settings className="h-5 w-5" />
+          {isCollapsed ? <PanelLeftOpen className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
           {!isCollapsed && "Collapse"}
         </Button>
-        <Button variant="ghost" size={isCollapsed ? "icon" : "default"} className="w-full justify-start gap-3" asChild>
-          <Link href="/">
+        <Button variant="ghost" size={isCollapsed ? "icon" : "default"} className="w-full justify-start gap-3" onClick={logout}>
             <LogOut className="h-5 w-5" />
             {!isCollapsed && "Logout"}
-          </Link>
         </Button>
       </div>
     </aside>

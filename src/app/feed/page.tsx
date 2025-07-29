@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { AppSidebar } from '@/components/layout/AppSidebar';
@@ -11,8 +11,7 @@ import { NeoButton } from '@/components/NeoButton';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { ThumbsUp, MessageCircle, Link as LinkIcon, Users, BookOpen, Search, Share2, MoreVertical, Trash2, Copy } from 'lucide-react';
-import { mockPosts as initialMockPosts, mockGroups, mockUsers } from '@/lib/mock';
+import { ThumbsUp, MessageCircle, Link as LinkIcon, Users, BookOpen, Search, Share2, MoreVertical, Trash2, Copy, Loader2 } from 'lucide-react';
 import type { Post } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import {
@@ -31,25 +30,49 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
-
+import { useAuth } from '@/hooks/useAuth';
+import { formatDistanceToNow } from 'date-fns';
 
 function CreatePost({ onAddPost }: { onAddPost: (newPost: Post) => void }) {
   const [postContent, setPostContent] = useState('');
-  const currentUser = mockUsers[0];
+  const [loading, setLoading] = useState(false);
+  const { user, idToken } = useAuth();
 
-  const handlePost = () => {
-    if (!postContent.trim()) return;
+  const handlePost = async () => {
+    if (!postContent.trim() || !idToken) return;
+    setLoading(true);
 
-    const newPost: Post = {
-        id: `p${Date.now()}`,
-        author: currentUser,
-        content: postContent,
-        timestamp: 'Just now',
-        likes: 0,
-        comments: 0,
-    };
-    onAddPost(newPost);
-    setPostContent('');
+    try {
+      const response = await fetch('/api/posts', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify({ content: postContent }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create post');
+      }
+
+      const newPost = await response.json();
+      onAddPost(newPost);
+      setPostContent('');
+      toast({
+        title: "Post Created",
+        description: "Your post is now live on the feed.",
+      });
+
+    } catch (error) {
+       toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Could not create your post. Please try again.",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -57,21 +80,25 @@ function CreatePost({ onAddPost }: { onAddPost: (newPost: Post) => void }) {
       <NeoCardContent className="p-4">
         <div className="flex gap-4">
           <Avatar className="hidden sm:block">
-            <AvatarImage src="https://placehold.co/100x100/A7C4D3/000000" data-ai-hint="user avatar" />
-            <AvatarFallback>AS</AvatarFallback>
+            <AvatarImage src={user?.avatar} data-ai-hint="user avatar" />
+            <AvatarFallback>{user?.name?.charAt(0)}</AvatarFallback>
           </Avatar>
           <div className="w-full">
             <Textarea
-              placeholder="What's on your mind, Alia?"
+              placeholder={`What's on your mind, ${user?.name?.split(' ')[0]}?`}
               className="min-h-24 border-2 border-foreground mb-4"
               value={postContent}
               onChange={(e) => setPostContent(e.target.value)}
+              disabled={loading}
             />
             <div className="flex justify-between items-center">
-                <Button variant="ghost" size="icon">
+                <Button variant="ghost" size="icon" disabled={loading}>
                     <LinkIcon className="h-5 w-5"/>
                 </Button>
-                <NeoButton onClick={handlePost}>Post</NeoButton>
+                <NeoButton onClick={handlePost} disabled={loading}>
+                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                  Post
+                </NeoButton>
             </div>
           </div>
         </div>
@@ -85,9 +112,9 @@ function ShareDialog({ post }: { post: Post }) {
 
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
-      setPostUrl(`${window.location.origin}/posts/${post.id}`);
+      setPostUrl(`${window.location.origin}/posts/${post._id}`);
     }
-  }, [post.id]);
+  }, [post._id]);
 
   const embedCode = `<iframe src="${postUrl}" width="600" height="400" frameborder="0"></iframe>`;
 
@@ -135,8 +162,8 @@ function ShareDialog({ post }: { post: Post }) {
 }
 
 
-function PostCard({ post }: { post: Post }) {
-  const currentUser = mockUsers[1]; // Mock as faculty to show admin options
+function PostCard({ post, currentUser }: { post: Post, currentUser: any }) {
+  const formattedTimestamp = formatDistanceToNow(new Date(post.timestamp), { addSuffix: true });
 
   return (
     <NeoCard>
@@ -149,10 +176,10 @@ function PostCard({ post }: { post: Post }) {
               </Avatar>
               <div>
                 <p className="font-bold">{post.author.name}</p>
-                <p className="text-sm text-muted-foreground">{post.author.role} &middot; {post.timestamp}</p>
+                <p className="text-sm text-muted-foreground">{post.author.role} &middot; {formattedTimestamp}</p>
               </div>
             </div>
-            {currentUser.role === 'Faculty' && (
+            {currentUser?.role === 'Faculty' && (
                  <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                          <Button variant="ghost" size="icon">
@@ -201,15 +228,8 @@ function RightSidebar() {
                     <h2 className="font-headline font-bold text-lg flex items-center gap-2"><Users className="h-5 w-5"/> My Groups</h2>
                 </NeoCardHeader>
                 <NeoCardContent className="p-4 pt-0 space-y-3">
-                    {mockGroups.slice(0, 3).map(group => (
-                        <div key={group.id} className="flex items-center gap-3">
-                            <Image src={group.coverImage} alt={group.name} width={40} height={40} className="rounded-md border-2 border-foreground" data-ai-hint="group image"/>
-                            <div>
-                                <Link href="/groups" className="font-semibold hover:underline">{group.name}</Link>
-                                <p className="text-sm text-muted-foreground">{group.memberCount} members</p>
-                            </div>
-                        </div>
-                    ))}
+                   {/* This will be populated with live data */}
+                   <p className="text-sm text-muted-foreground">You are not part of any groups yet.</p>
                 </NeoCardContent>
                 <NeoCardFooter className="p-4 pt-0">
                     <Button variant="link" className="p-0 h-auto" asChild>
@@ -236,10 +256,45 @@ function RightSidebar() {
 }
 
 export default function FeedPage() {
-  const [mockPosts, setMockPosts] = useState(initialMockPosts);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { user, authLoading } = useAuth();
+
+
+  const fetchPosts = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/posts');
+      if (!response.ok) {
+        throw new Error('Failed to fetch posts');
+      }
+      const data = await response.json();
+      setPosts(data.posts);
+    } catch (err) {
+      setError('Could not load the feed. Please try refreshing the page.');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchPosts();
+  }, [fetchPosts]);
+
 
   const handleAddPost = (newPost: Post) => {
-    setMockPosts([newPost, ...mockPosts]);
+    setPosts([newPost, ...posts]);
+  }
+
+  if (authLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin" />
+      </div>
+    )
   }
 
   return (
@@ -264,7 +319,9 @@ export default function FeedPage() {
             <div className="flex-1 space-y-6">
                 <CreatePost onAddPost={handleAddPost} />
                 <div className="space-y-6">
-                    {mockPosts.map(post => <PostCard key={post.id} post={post} />)}
+                    {loading && <div className="text-center p-8"><Loader2 className="h-8 w-8 animate-spin mx-auto"/></div>}
+                    {error && <div className="text-center p-8 text-destructive">{error}</div>}
+                    {!loading && !error && posts.map(post => <PostCard key={post._id?.toString()} post={post} currentUser={user} />)}
                 </div>
             </div>
             <RightSidebar />

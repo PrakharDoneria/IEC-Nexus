@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   suggestRelevantResources,
   type SuggestRelevantResourcesOutput,
@@ -8,7 +9,7 @@ import {
 import { NeoButton } from "@/components/NeoButton";
 import { NeoCard, NeoCardContent, NeoCardHeader } from "@/components/NeoCard";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { mockPosts } from "@/lib/mock";
+import { Post } from "@/lib/types";
 import { Loader2, Lightbulb, AlertTriangle, LinkIcon } from "lucide-react";
 
 export function ResourceGenerator() {
@@ -17,13 +18,35 @@ export function ResourceGenerator() {
     null
   );
   const [error, setError] = useState<string | null>(null);
+  const [recentPosts, setRecentPosts] = useState<Post[]>([]);
+  const [postsLoading, setPostsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchRecentPosts = async () => {
+      try {
+        const response = await fetch('/api/posts?limit=5');
+        if (!response.ok) {
+          throw new Error('Failed to fetch posts');
+        }
+        const data = await response.json();
+        setRecentPosts(data.posts);
+      } catch (err) {
+        console.error("Could not fetch recent posts for AI.", err);
+      } finally {
+        setPostsLoading(false);
+      }
+    };
+    fetchRecentPosts();
+  }, []);
 
   const handleSubmit = async () => {
+    if (postsLoading || recentPosts.length === 0) return;
+
     setLoading(true);
     setError(null);
     setResult(null);
 
-    const recentPostsForAI = mockPosts.map((post) => ({
+    const recentPostsForAI = recentPosts.map((post) => ({
       content: post.content,
       author: post.author.name,
     }));
@@ -57,13 +80,18 @@ export function ResourceGenerator() {
           <NeoButton
             size="lg"
             onClick={handleSubmit}
-            disabled={loading}
+            disabled={loading || postsLoading || recentPosts.length === 0}
           >
             {loading ? (
               <>
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                 Generating...
               </>
+            ) : postsLoading ? (
+                 <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Loading Feed...
+                 </>
             ) : (
               "Generate Resources"
             )}

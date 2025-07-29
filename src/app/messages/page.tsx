@@ -7,10 +7,31 @@ import { MobileNav } from "@/components/layout/MobileNav";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { NeoButton } from "@/components/NeoButton";
-import { mockUsers, mockConversations, mockMessages as initialMockMessages } from "@/lib/mock";
-import type { Conversation, Message } from "@/lib/types";
+import { Conversation, Message, User } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { Search, Send } from "lucide-react";
+import { Search, Send, MessagesSquare } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+
+const mockConversations: Conversation[] = [
+    {
+        id: 'convo1',
+        participant: { id: 'user2', name: 'Jane Doe', role: 'Student', email: 'jane@example.com', avatar: 'https://placehold.co/100x100/D3A7C4/000000?text=JD', followers:[], following:[] },
+        lastMessage: { id: 'msg1', sender: { id: 'user2', name: 'Jane Doe', role: 'Student', email: 'jane@example.com', avatar: 'https://placehold.co/100x100/D3A7C4/000000?text=JD', followers:[], following:[] }, content: 'Hey, did you finish the assignment?', timestamp: '10m' }
+    },
+    {
+        id: 'convo2',
+        participant: { id: 'user3', name: 'Prof. Smith', role: 'Faculty', email: 'prof@ieccollege.com', avatar: 'https://placehold.co/100x100/C4D3A7/000000?text=PS', followers:[], following:[] },
+        lastMessage: { id: 'msg2', sender: { id: 'user1', name: 'John Doe', role: 'Student', email: 'john@example.com', avatar: 'https://placehold.co/100x100/A7C4D3/000000?text=JD', followers:[], following:[] }, content: 'Yes, I had a question about part 2.', timestamp: '1h' }
+    },
+];
+
+const initialMockMessages: Record<string, Message[]> = {
+    'convo1': [
+        { id: 'msg1', sender: { id: 'user2', name: 'Jane Doe', role: 'Student', email: 'jane@example.com', avatar: 'https://placehold.co/100x100/D3A7C4/000000?text=JD', followers:[], following:[] }, content: 'Hey, did you finish the assignment?', timestamp: '10m ago' },
+        { id: 'msg3', sender: { id: 'user1', name: 'John Doe', role: 'Student', email: 'john@example.com', avatar: 'https://placehold.co/100x100/A7C4D3/000000?text=JD', followers:[], following:[] }, content: 'Almost! Just stuck on the last question.', timestamp: '8m ago' },
+    ]
+};
+
 
 function ConversationList() {
     return (
@@ -24,19 +45,7 @@ function ConversationList() {
             </div>
             <div className="flex-1 overflow-y-auto">
                 <nav className="grid gap-px">
-                    {mockConversations.map((convo, index) => (
-                        <button key={convo.id} className={cn("flex items-center gap-3 p-4 text-left transition-colors hover:bg-secondary", index === 0 && "bg-secondary")}>
-                            <Avatar className="border-2 border-foreground">
-                                <AvatarImage src={convo.participant.avatar} data-ai-hint="user avatar" />
-                                <AvatarFallback>{convo.participant.name.slice(0, 2)}</AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1 overflow-hidden">
-                                <p className="font-semibold truncate">{convo.participant.name}</p>
-                                <p className="text-sm text-muted-foreground truncate">{convo.lastMessage.content}</p>
-                            </div>
-                            <span className="text-xs text-muted-foreground">{convo.lastMessage.timestamp}</span>
-                        </button>
-                    ))}
+                   <p className="p-4 text-sm text-muted-foreground">No conversations yet.</p>
                 </nav>
             </div>
         </div>
@@ -44,65 +53,17 @@ function ConversationList() {
 }
 
 function MessageView() {
-    const conversationId = mockConversations[0].id;
-    const [messages, setMessages] = useState(initialMockMessages[conversationId] || []);
-    const [newMessage, setNewMessage] = useState("");
-    const currentUser = mockUsers[0];
-
-    const handleSendMessage = (e: React.FormEvent) => {
-        e.preventDefault();
-        if(!newMessage.trim()) return;
-
-        const message: Message = {
-            id: `m${Date.now()}`,
-            sender: currentUser,
-            content: newMessage,
-            timestamp: 'Just now',
-        };
-
-        setMessages([...messages, message]);
-        setNewMessage('');
-    }
+    const { user } = useAuth();
+    
+    if (!user) return null;
 
     return (
-        <div className="flex flex-col h-full">
-            <header className="flex items-center gap-4 p-4 border-b-2 border-foreground">
-                <Avatar className="border-2 border-foreground">
-                    <AvatarImage src={mockConversations[0].participant.avatar} data-ai-hint="user avatar" />
-                    <AvatarFallback>{mockConversations[0].participant.name.slice(0, 2)}</AvatarFallback>
-                </Avatar>
-                <div>
-                    <h3 className="font-semibold text-lg">{mockConversations[0].participant.name}</h3>
-                    <p className="text-sm text-muted-foreground">{mockConversations[0].participant.role}</p>
-                </div>
-            </header>
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                {messages.map(message => (
-                    <div key={message.id} className={cn("flex items-end gap-3", message.sender.id === currentUser.id ? 'flex-row-reverse' : '')}>
-                        <Avatar className="h-8 w-8 border-2 border-foreground">
-                            <AvatarImage src={message.sender.avatar} data-ai-hint="user avatar" />
-                            <AvatarFallback>{message.sender.name.slice(0,2)}</AvatarFallback>
-                        </Avatar>
-                        <div className={cn("max-w-xs lg:max-w-md rounded-lg p-3", message.sender.id === currentUser.id ? "bg-primary text-primary-foreground" : "bg-card border-2 border-foreground")}>
-                           <p>{message.content}</p>
-                           <p className={cn("text-xs mt-1", message.sender.id === currentUser.id ? 'text-primary-foreground/70' : 'text-muted-foreground' )}>{message.timestamp}</p>
-                        </div>
-                    </div>
-                ))}
-            </div>
-             <footer className="p-4 border-t-2 border-foreground">
-                <form className="flex gap-4" onSubmit={handleSendMessage}>
-                    <Input 
-                        placeholder="Type a message..." 
-                        className="flex-1 border-2 border-foreground"
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                    />
-                    <NeoButton size="icon" type="submit">
-                        <Send className="h-5 w-5"/>
-                    </NeoButton>
-                </form>
-            </footer>
+        <div className="flex flex-col h-full items-center justify-center text-center p-8">
+            <MessagesSquare className="h-16 w-16 text-muted-foreground mb-4" />
+            <h3 className="font-headline text-2xl font-bold">Direct Messaging</h3>
+            <p className="text-muted-foreground max-w-sm mx-auto">
+                The direct messaging feature is under construction. Soon you'll be able to chat with other students and faculty right here.
+            </p>
         </div>
     )
 }

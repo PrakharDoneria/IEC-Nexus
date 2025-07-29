@@ -3,8 +3,7 @@ import { AppSidebar } from "@/components/layout/AppSidebar";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { NeoCard, NeoCardContent, NeoCardFooter, NeoCardHeader } from "@/components/NeoCard";
 import { NeoButton } from "@/components/NeoButton";
-import { mockGroups } from "@/lib/mock";
-import type { Group } from "@/lib/types";
+import { Group } from "@/lib/types";
 import { Plus, LogIn } from "lucide-react";
 import {
   Dialog,
@@ -18,6 +17,37 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button";
+
+const mockGroups: Group[] = [
+  {
+    id: '1',
+    name: 'CS & Engineering',
+    description: 'Discussions about computer science, software engineering, and technology trends.',
+    memberCount: 128,
+    coverImage: 'https://placehold.co/400x150/A7C4D3/000000'
+  },
+  {
+    id: '2',
+    name: 'AI & Machine Learning Club',
+    description: 'A place for AI enthusiasts to share projects, papers, and ideas.',
+    memberCount: 89,
+    coverImage: 'https://placehold.co/400x150/D3A7C4/000000'
+  },
+  {
+    id: '3',
+    name: 'Campus Photography',
+    description: 'Share your best shots of the campus and learn new photography techniques.',
+    memberCount: 54,
+    coverImage: 'https://placehold.co/400x150/C4D3A7/000000'
+  },
+    {
+    id: '4',
+    name: 'Final Year Projects',
+    description: 'Collaborate and get help with your final year engineering projects.',
+    memberCount: 72,
+    coverImage: 'https://placehold.co/400x150/A7A7D3/000000'
+  },
+];
 
 
 function GroupCard({ group }: { group: Group }) {
