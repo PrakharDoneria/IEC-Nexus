@@ -24,6 +24,14 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { MoreVertical } from 'lucide-react';
+
 
 function GroupCard({ group }: { group: Group }) {
     return (
@@ -43,7 +51,7 @@ function GroupCard({ group }: { group: Group }) {
     )
 }
 
-function JoinGroupDialog({ onGroupJoined }: { onGroupJoined: () => void }) {
+function JoinGroupDialog({ onGroupJoined, asChild }: { onGroupJoined: () => void; asChild?: boolean }) {
     const { idToken } = useAuth();
     const [loading, setLoading] = useState(false);
     const [open, setOpen] = useState(false);
@@ -76,11 +84,15 @@ function JoinGroupDialog({ onGroupJoined }: { onGroupJoined: () => void }) {
             setLoading(false);
         }
     };
+    
+    const Trigger = asChild ? DropdownMenuItem : NeoButton;
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <NeoButton variant="secondary"><LogIn className="mr-2 h-4 w-4" /> Join Group</NeoButton>
+                <Trigger variant={asChild ? undefined : "secondary"} onSelect={(e) => e.preventDefault()}>
+                    <LogIn className="mr-2 h-4 w-4" /> Join Group
+                </Trigger>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px] border-2 border-foreground shadow-[4px_4px_0px_hsl(var(--foreground))]">
                 <DialogHeader>
@@ -108,7 +120,7 @@ function JoinGroupDialog({ onGroupJoined }: { onGroupJoined: () => void }) {
     )
 }
 
-function CreateGroupDialog({ onGroupCreated }: { onGroupCreated: () => void }) {
+function CreateGroupDialog({ onGroupCreated, asChild }: { onGroupCreated: () => void; asChild?: boolean }) {
     const { idToken } = useAuth();
     const [loading, setLoading] = useState(false);
     const [open, setOpen] = useState(false);
@@ -143,11 +155,15 @@ function CreateGroupDialog({ onGroupCreated }: { onGroupCreated: () => void }) {
             setLoading(false);
         }
     };
+    
+    const Trigger = asChild ? DropdownMenuItem : NeoButton;
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <NeoButton><Plus className="mr-2 h-4 w-4" /> Create Group</NeoButton>
+                <Trigger onSelect={asChild ? (e) => e.preventDefault() : undefined}>
+                    <Plus className="mr-2 h-4 w-4" /> Create Group
+                </Trigger>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px] border-2 border-foreground shadow-[4px_4px_0px_hsl(var(--foreground))]">
                 <DialogHeader>
@@ -212,7 +228,21 @@ export default function GroupsPage() {
     <div className="flex min-h-screen bg-background">
       <AppSidebar />
       <div className="flex-1 flex flex-col pb-16 md:pb-0">
-        <MobileNav />
+        <MobileNav pageTitle="Groups">
+           <div className="md:hidden">
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                            <MoreVertical className="h-5 w-5"/>
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="border-2 border-foreground shadow-[4px_4px_0px_hsl(var(--foreground))]">
+                        <CreateGroupDialog onGroupCreated={() => fetchGroups(true)} asChild/>
+                        <JoinGroupDialog onGroupJoined={() => fetchGroups(true)} asChild/>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </div>
+        </MobileNav>
         <header className="hidden md:flex h-16 items-center justify-between border-b-2 border-foreground bg-card px-4 md:px-6">
             <h1 className="text-2xl font-headline font-bold">Groups</h1>
             <div className="flex items-center gap-2 sm:gap-4">

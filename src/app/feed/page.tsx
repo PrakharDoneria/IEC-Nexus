@@ -464,7 +464,11 @@ export default function FeedPage() {
     <div className="flex min-h-screen bg-background">
       <AppSidebar />
       <div className="flex-1 flex flex-col pb-16 md:pb-0">
-        <MobileNav />
+        <MobileNav pageTitle="Activity Feed">
+          <div className="w-full max-w-xs md:hidden">
+            <SearchBar />
+          </div>
+        </MobileNav>
         <header className="hidden md:flex h-16 items-center justify-between gap-4 border-b-2 border-foreground bg-card px-4 md:px-6">
             <div className="flex-1">
                 <h1 className="text-2xl font-headline font-bold">Activity Feed</h1>

@@ -1,29 +1,34 @@
 
 'use client';
 
+import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Users, LayoutDashboard, MessageSquare, User, BookOpen, Settings, Code, Trophy, Search } from 'lucide-react';
+import { Users, LayoutDashboard, MessageSquare, User, BookOpen, Settings, Code, Trophy, Search, MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { useUnreadCount } from '@/hooks/useUnreadCount';
 import { Badge } from '../ui/badge';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet"
 
-const topNavItems = [
-  { href: '/search', icon: Search, label: 'Search' },
-  { href: '/settings', icon: Settings, label: 'Settings' },
-];
 
 const bottomNavItems = [
   { href: '/feed', icon: LayoutDashboard, label: 'Feed' },
   { href: '/groups', icon: Users, label: 'Groups' },
-  { href: '/leaderboard', icon: Trophy, label: 'Leaderboard' },
+  { href: '/challenge', icon: Code, label: 'Challenge' },
   { href: '/messages', icon: MessageSquare, label: 'Messages', requiresBadge: true },
   { href: '/profile', icon: User, label: 'Profile' },
 ];
 
-export function MobileNav() {
+export function MobileNav({ children, pageTitle }: { children?: React.ReactNode, pageTitle?: string }) {
   const pathname = usePathname();
   const { user } = useAuth();
   const { totalUnreadCount } = useUnreadCount();
@@ -31,23 +36,43 @@ export function MobileNav() {
   return (
     <>
       <header className="md:hidden sticky top-0 flex h-16 items-center justify-between border-b-2 border-foreground bg-card px-4 z-10">
-        <Link href="/feed" className="flex items-center gap-2 font-headline font-semibold text-xl">
-           <div className="p-2 bg-primary border-2 border-foreground rounded-md">
-              <Users className="h-6 w-6 text-primary-foreground" />
+        <Link href="/feed" className="flex items-center gap-2 font-headline font-semibold text-lg">
+           <div className="p-1.5 bg-primary border-2 border-foreground rounded-md">
+              <Users className="h-5 w-5 text-primary-foreground" />
             </div>
            IEC Nexus
         </Link>
         <div className="flex items-center gap-1">
-          {topNavItems.map(item => (
-            <Button key={item.href} variant="ghost" size="icon" asChild>
-              <Link href={item.href}>
-                <item.icon className="h-6 w-6"/>
-                <span className="sr-only">{item.label}</span>
-              </Link>
-            </Button>
-          ))}
+          {children}
+          <Button variant="ghost" size="icon" asChild>
+            <Link href="/search">
+              <Search className="h-5 w-5"/>
+              <span className="sr-only">Search</span>
+            </Link>
+          </Button>
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <Settings className="h-5 w-5" />
+                <span className="sr-only">Settings</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-64 border-l-2 border-foreground">
+              <SheetHeader>
+                <SheetTitle className="font-headline text-2xl">Settings</SheetTitle>
+              </SheetHeader>
+              <div className="py-4">
+                 <p className="text-muted-foreground">This is where settings would go.</p>
+              </div>
+            </SheetContent>
+          </Sheet>
+
         </div>
       </header>
+       <div className="md:hidden flex h-14 items-center justify-center border-b-2 border-foreground bg-card">
+         {pageTitle && <h1 className="font-headline text-xl font-bold">{pageTitle}</h1>}
+       </div>
+
 
       {/* Bottom Navigation */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-card border-t-2 border-foreground h-16 z-10 flex justify-around items-center">
