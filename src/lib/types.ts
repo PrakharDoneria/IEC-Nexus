@@ -4,6 +4,7 @@ export type User = {
   email: string;
   avatar: string;
   role: 'Student' | 'Faculty';
+  fcmToken?: string;
 };
 
 export type Post = {
