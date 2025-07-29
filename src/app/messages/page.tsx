@@ -11,10 +11,22 @@ import { Conversation, Message } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Search, Send, MessagesSquare, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { formatDistanceToNow } from "date-fns";
+import { format, formatDistanceToNow, isToday, isYesterday } from "date-fns";
 import Link from "next/link";
 import { toast } from "@/hooks/use-toast";
 import { useSearchParams } from "next/navigation";
+
+
+function formatTimestamp(timestamp: Date | string) {
+    const date = new Date(timestamp);
+    if (isToday(date)) {
+        return format(date, 'p'); // e.g., 4:30 PM
+    }
+    if (isYesterday(date)) {
+        return 'Yesterday';
+    }
+    return format(date, 'P'); // e.g., 04/10/2024
+}
 
 
 function ConversationList({ conversations, onSelect, activeConvoId, loading }: { conversations: Conversation[], onSelect: (id: string) => void, activeConvoId: string | null, loading: boolean }) {
@@ -33,21 +45,23 @@ function ConversationList({ conversations, onSelect, activeConvoId, loading }: {
                  {/* Search could be implemented in the future */}
             </div>
             <div className="flex-1 overflow-y-auto">
-                <nav className="grid gap-px">
+                <nav className="divide-y-2 divide-foreground">
                    {conversations.length === 0 ? (
-                       <p className="p-4 text-sm text-muted-foreground">No conversations yet.</p>
+                       <p className="p-4 text-sm text-muted-foreground">No conversations yet. Start one from a user's profile.</p>
                    ) : (
                        conversations.map(convo => (
-                           <button key={convo._id?.toString()} onClick={() => onSelect(convo._id!.toString())} className={cn("flex items-center gap-3 p-3 text-left hover:bg-secondary", activeConvoId === convo._id?.toString() && 'bg-secondary')}>
+                           <button key={convo._id?.toString()} onClick={() => onSelect(convo._id!.toString())} className={cn("w-full flex items-center gap-3 p-3 text-left hover:bg-secondary", activeConvoId === convo._id?.toString() && 'bg-secondary')}>
                                <Avatar>
                                    <AvatarImage src={convo.participant?.avatar} />
                                    <AvatarFallback>{convo.participant?.name.charAt(0)}</AvatarFallback>
                                </Avatar>
                                <div className="flex-1 overflow-hidden">
-                                   <p className="font-semibold truncate">{convo.participant?.name}</p>
+                                   <div className="flex justify-between items-baseline">
+                                     <p className="font-semibold truncate">{convo.participant?.name}</p>
+                                     {convo.lastMessage?.timestamp && <span className="text-xs text-muted-foreground whitespace-nowrap">{formatTimestamp(convo.lastMessage.timestamp)}</span>}
+                                   </div>
                                    <p className="text-sm text-muted-foreground truncate">{convo.lastMessage?.content}</p>
                                </div>
-                               {convo.lastMessage?.timestamp && <span className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(convo.lastMessage.timestamp), { addSuffix: true })}</span>}
                            </button>
                        ))
                    )}
@@ -88,13 +102,15 @@ function MessageView({ conversationId, onMessageSent }: { conversationId: string
 
 
     useEffect(() => {
-        fetchMessages();
+        if (conversationId) {
+            fetchMessages();
 
-        // Poll for new messages every 5 seconds
-        const intervalId = setInterval(fetchMessages, 5000);
+            // Poll for new messages every 5 seconds
+            const intervalId = setInterval(fetchMessages, 5000);
 
-        return () => clearInterval(intervalId);
-    }, [fetchMessages]);
+            return () => clearInterval(intervalId);
+        }
+    }, [conversationId, fetchMessages]);
 
     useEffect(() => {
         scrollToBottom();
@@ -136,7 +152,7 @@ function MessageView({ conversationId, onMessageSent }: { conversationId: string
         )
     }
 
-     if (loading) {
+     if (loading && messages.length === 0) {
         return (
             <div className="flex flex-col h-full items-center justify-center">
                  <Loader2 className="h-8 w-8 animate-spin"/>
@@ -155,8 +171,11 @@ function MessageView({ conversationId, onMessageSent }: { conversationId: string
                               <AvatarFallback>{msg.sender?.name.charAt(0)}</AvatarFallback>
                           </Avatar>
                       )}
-                      <div className={cn("max-w-xs md:max-w-md lg:max-w-lg p-3 rounded-lg border-2 border-foreground", msg.senderId === user?.id ? "bg-primary text-primary-foreground" : "bg-card")}>
-                          <p>{msg.content}</p>
+                      <div className={cn(
+                          "max-w-xs md:max-w-md lg:max-w-lg p-3 rounded-xl border-2 border-foreground", 
+                          msg.senderId === user?.id ? "bg-primary text-primary-foreground rounded-br-none" : "bg-card rounded-bl-none"
+                        )}>
+                          <p className="whitespace-pre-wrap">{msg.content}</p>
                       </div>
                   </div>
               ))}
@@ -209,7 +228,7 @@ export default function MessagesPage() {
         const recipientId = searchParams.get('recipient');
 
         const startOrSelectConversation = async () => {
-            if (recipientId && idToken) {
+            if (recipientId && idToken && user && recipientId !== user.id) {
                 try {
                     const res = await fetch('/api/messages', {
                         method: 'POST',
@@ -235,7 +254,7 @@ export default function MessagesPage() {
             startOrSelectConversation();
         }
 
-    }, [searchParams, idToken, fetchConversations, authLoading]);
+    }, [searchParams, idToken, fetchConversations, authLoading, user]);
 
     if (authLoading) {
         return (
@@ -253,7 +272,7 @@ export default function MessagesPage() {
             <AppSidebar />
             <div className="flex-1 flex flex-col">
                 <MobileNav />
-                <main className="flex-1 grid grid-cols-1 md:grid-cols-[350px_1fr] md:h-[calc(100vh-65px)]">
+                <main className="flex-1 grid grid-cols-1 md:grid-cols-[350px_1fr] h-[calc(100vh-64px)]">
                     <ConversationList conversations={conversations} onSelect={setActiveConvoId} activeConvoId={activeConvoId} loading={loadingConvos} />
                     <MessageView conversationId={activeConvoId} onMessageSent={fetchConversations} />
                 </main>
@@ -261,3 +280,5 @@ export default function MessagesPage() {
         </div>
     );
 }
+
+    
