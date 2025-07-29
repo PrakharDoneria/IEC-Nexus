@@ -1,10 +1,11 @@
+
 'use client';
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Menu, Users, LayoutDashboard, MessageSquare, User, BookOpen, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 
 const navItems = [
@@ -29,6 +30,7 @@ export function MobileNav() {
           </Button>
         </SheetTrigger>
         <SheetContent side="left">
+           <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
           <nav className="grid gap-6 text-lg font-medium">
             <Link href="/feed" className="flex items-center gap-2 text-lg font-semibold mb-4">
               <div className="p-2 bg-primary border-2 border-foreground rounded-md">
