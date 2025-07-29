@@ -8,11 +8,11 @@ import { MobileNav } from "@/components/layout/MobileNav";
 import { NeoCard, NeoCardContent, NeoCardHeader } from "@/components/NeoCard";
 import { NeoButton } from "@/components/NeoButton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Mail, Briefcase, GraduationCap, UserPlus, UserCheck, ShieldBan, Loader2, Edit } from "lucide-react";
+import { Mail, Briefcase, GraduationCap, UserPlus, UserCheck, ShieldBan, Loader2, Edit, MessageSquare } from "lucide-react";
 import { Post, User } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 
@@ -102,6 +102,21 @@ function BanButton({ profileUser, onBan }: { profileUser: User; onBan: () => voi
         <NeoButton variant="destructive" onClick={handleBan} disabled={loading}>
             {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <ShieldBan className="mr-2 h-4 w-4" />}
             Ban User
+        </NeoButton>
+    )
+}
+
+function MessageButton({ profileUser }: { profileUser: User }) {
+    const router = useRouter();
+
+    const handleMessage = () => {
+        router.push(`/messages?recipient=${profileUser.id}`);
+    }
+
+    return (
+        <NeoButton variant="secondary" onClick={handleMessage}>
+            <MessageSquare className="mr-2 h-4 w-4"/>
+            Message
         </NeoButton>
     )
 }
@@ -224,7 +239,7 @@ export default function ProfilePage() {
                 ) : (
                     <>
                         <FollowButton profileUser={profileUser} />
-                        <NeoButton variant="secondary" disabled>Message</NeoButton>
+                        <MessageButton profileUser={profileUser} />
                     </>
                 )}
                  {currentUser?.role === 'Faculty' && !isOwnProfile && (

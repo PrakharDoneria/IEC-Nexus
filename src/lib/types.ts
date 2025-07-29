@@ -46,16 +46,19 @@ export type Group = {
 };
 
 export type Message = {
-    id: string;
-    sender: User;
+    _id?: ObjectId;
+    conversationId: ObjectId;
+    senderId: string;
     content: string;
-    timestamp: string;
+    timestamp: Date;
+    sender?: User; // populated
 };
 
 export type Conversation = {
-    id: string;
-    participant: User;
-    lastMessage: Message;
+    _id?: ObjectId;
+    participants: string[]; // array of user IDs
+    lastMessage?: Message;
+    participantDetails?: User[]; // populated
 };
 
 
