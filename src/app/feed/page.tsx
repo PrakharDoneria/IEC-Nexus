@@ -7,10 +7,27 @@ import { NeoButton } from '@/components/NeoButton';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { ThumbsUp, MessageCircle, Link as LinkIcon, Users, BookOpen, Search } from 'lucide-react';
-import { mockPosts, mockGroups } from '@/lib/mock';
+import { ThumbsUp, MessageCircle, Link as LinkIcon, Users, BookOpen, Search, Share2, MoreVertical, Trash2, Code, Copy } from 'lucide-react';
+import { mockPosts, mockGroups, mockUsers } from '@/lib/mock';
 import type { Post } from '@/lib/types';
 import { Input } from '@/components/ui/input';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Label } from '@/components/ui/label';
+import { toast } from '@/hooks/use-toast';
+
 
 function CreatePost() {
   return (
@@ -39,19 +56,86 @@ function CreatePost() {
   );
 }
 
+function ShareDialog({ post }: { post: Post }) {
+  const postUrl = typeof window !== 'undefined' ? `${window.location.origin}/posts/${post.id}` : '';
+  const embedCode = `<iframe src="${postUrl}" width="600" height="400" frameborder="0"></iframe>`;
+
+  const copyToClipboard = (text: string, type: string) => {
+    navigator.clipboard.writeText(text);
+    toast({
+      title: `${type} Copied!`,
+      description: "The content has been copied to your clipboard.",
+    })
+  }
+
+  return (
+     <Dialog>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="sm" className="flex items-center gap-2">
+            <Share2 className="h-5 w-5" /> Share
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-2xl border-2 border-foreground shadow-[4px_4px_0px_hsl(var(--foreground))]">
+        <DialogHeader>
+          <DialogTitle className="font-headline">Share Post</DialogTitle>
+          <DialogDescription>
+            Share this post with others via a link or embed it on a website.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-6 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="post-link" className="font-semibold">Post Link</Label>
+              <div className="flex gap-2">
+                <Input id="post-link" value={postUrl} readOnly className="border-2 border-foreground"/>
+                <NeoButton size="icon" onClick={() => copyToClipboard(postUrl, 'Link')}><Copy className="h-5 w-5"/></NeoButton>
+              </div>
+            </div>
+             <div className="space-y-2">
+              <Label htmlFor="embed-code" className="font-semibold">Embed Code</Label>
+               <div className="flex gap-2">
+                <Textarea id="embed-code" value={embedCode} readOnly className="border-2 border-foreground font-code text-sm" rows={4}/>
+                <NeoButton size="icon" onClick={() => copyToClipboard(embedCode, 'Embed Code')}><Copy className="h-5 w-5"/></NeoButton>
+              </div>
+            </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+
 function PostCard({ post }: { post: Post }) {
+  const currentUser = mockUsers[1]; // Mock as faculty to show admin options
+
   return (
     <NeoCard>
       <NeoCardHeader className="p-4">
-        <div className="flex items-center gap-3">
-          <Avatar>
-            <AvatarImage src={post.author.avatar} data-ai-hint="user avatar" />
-            <AvatarFallback>{post.author.name.charAt(0)}</AvatarFallback>
-          </Avatar>
-          <div>
-            <p className="font-bold">{post.author.name}</p>
-            <p className="text-sm text-muted-foreground">{post.author.role} &middot; {post.timestamp}</p>
-          </div>
+        <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Avatar>
+                <AvatarImage src={post.author.avatar} data-ai-hint="user avatar" />
+                <AvatarFallback>{post.author.name.charAt(0)}</AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="font-bold">{post.author.name}</p>
+                <p className="text-sm text-muted-foreground">{post.author.role} &middot; {post.timestamp}</p>
+              </div>
+            </div>
+            {currentUser.role === 'Faculty' && (
+                 <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                         <Button variant="ghost" size="icon">
+                            <MoreVertical className="h-5 w-5" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="border-2 border-foreground shadow-[4px_4px_0px_hsl(var(--foreground))]">
+                        <DropdownMenuItem className="text-destructive focus:bg-destructive/10 focus:text-destructive">
+                            <Trash2 className="mr-2 h-4 w-4"/>
+                            <span>Delete Post</span>
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            )}
         </div>
       </NeoCardHeader>
       <NeoCardContent className="p-4 pt-0">
@@ -64,13 +148,14 @@ function PostCard({ post }: { post: Post }) {
         )}
       </NeoCardContent>
       <NeoCardFooter className="p-4 pt-0">
-        <div className="flex items-center gap-4 text-muted-foreground">
+        <div className="flex items-center gap-1 text-muted-foreground">
           <Button variant="ghost" size="sm" className="flex items-center gap-2">
             <ThumbsUp className="h-5 w-5" /> {post.likes}
           </Button>
           <Button variant="ghost" size="sm" className="flex items-center gap-2">
             <MessageCircle className="h-5 w-5" /> {post.comments}
           </Button>
+           <ShareDialog post={post} />
         </div>
       </NeoCardFooter>
     </NeoCard>
@@ -151,3 +236,5 @@ export default function FeedPage() {
     </div>
   );
 }
+
+    

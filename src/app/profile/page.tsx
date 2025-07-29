@@ -4,7 +4,7 @@ import { NeoCard, NeoCardContent, NeoCardHeader } from "@/components/NeoCard";
 import { NeoButton } from "@/components/NeoButton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { mockUsers, mockPosts } from "@/lib/mock";
-import { Mail, Briefcase, GraduationCap, UserPlus, UserCheck } from "lucide-react";
+import { Mail, Briefcase, GraduationCap, UserPlus, UserCheck, ShieldBan } from "lucide-react";
 import { Post } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 
@@ -32,10 +32,11 @@ function FollowButton() {
 }
 
 export default function ProfilePage() {
-  // Using the first faculty member for demonstration
+  // Using a faculty member for viewing profile, and a student as current user
   const user = mockUsers[1]; 
   const userPosts = mockPosts.filter(p => p.author.id === user.id);
   const currentUser = mockUsers[0];
+  const viewingAsFaculty = mockUsers[1].role === 'Faculty'; // Check if viewer is faculty
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -64,6 +65,12 @@ export default function ProfilePage() {
                 <div className="flex gap-2">
                     <FollowButton />
                     <NeoButton variant="secondary">Message</NeoButton>
+                    {viewingAsFaculty && (
+                         <NeoButton variant="destructive">
+                            <ShieldBan className="mr-2 h-4 w-4" />
+                            Ban User
+                        </NeoButton>
+                    )}
                 </div>
             )}
           </div>
@@ -111,3 +118,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    
