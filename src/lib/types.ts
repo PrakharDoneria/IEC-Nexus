@@ -5,6 +5,8 @@ export type User = {
   avatar: string;
   role: 'Student' | 'Faculty';
   fcmToken?: string;
+  following?: string[];
+  followers?: string[];
 };
 
 export type Post = {
@@ -36,4 +38,12 @@ export type Conversation = {
     id: string;
     participant: User;
     lastMessage: Message;
+}
+
+export type NotificationSettings = {
+    newFollower: boolean;
+    postLike: boolean;
+    postComment: boolean;
+    groupInvite: boolean;
+    directMessage: boolean;
 }

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, Users, LayoutDashboard, MessageSquare, User, BookOpen } from 'lucide-react';
+import { Menu, Users, LayoutDashboard, MessageSquare, User, BookOpen, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
@@ -13,6 +13,7 @@ const navItems = [
   { href: '/groups', icon: Users, label: 'Groups' },
   { href: '/resources', icon: BookOpen, label: 'Resources' },
   { href: '/profile', icon: User, label: 'Profile' },
+  { href: '/settings', icon: Settings, label: 'Settings' },
 ];
 
 export function MobileNav() {
@@ -41,7 +42,7 @@ export function MobileNav() {
                 href={item.href}
                 className={cn(
                   'flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground',
-                  pathname === item.href && 'text-foreground'
+                  pathname.startsWith(item.href) && 'text-foreground'
                 )}
               >
                 <item.icon className="h-5 w-5" />

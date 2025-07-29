@@ -20,11 +20,12 @@ const navItems = [
   { href: '/groups', icon: Users, label: 'Groups' },
   { href: '/resources', icon: BookOpen, label: 'Resources' },
   { href: '/profile', icon: User, label: 'Profile' },
+  { href: '/settings', icon: Settings, label: 'Settings' },
 ];
 
 const NavLink = ({ item, isCollapsed }: { item: typeof navItems[0], isCollapsed: boolean }) => {
   const pathname = usePathname();
-  const isActive = pathname === item.href;
+  const isActive = pathname.startsWith(item.href);
 
   const linkContent = (
     <Link
