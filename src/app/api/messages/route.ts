@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
                     as: 'participantDetails'
                 }
             },
-            { $unwind: '$participantDetails' },
+            { $unwind: { path: '$participantDetails', preserveNullAndEmptyArrays: true } },
             { $project: {
                 _id: 1,
                 lastMessage: 1,
@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
 
   } catch (error) {
     console.error('Error fetching conversations:', error);
-    if (error.code === 'auth/id-token-expired' || error.code === 'auth/argument-error') {
+    if (error instanceof Error && (error.message.includes('auth/id-token-expired') || error.message.includes('auth/argument-error'))) {
        return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
     return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
 
     } catch (error) {
         console.error('Error starting conversation:', error);
-        if (error.code === 'auth/id-token-expired' || error.code === 'auth/argument-error') {
+        if (error instanceof Error && (error.message.includes('auth/id-token-expired') || error.message.includes('auth/argument-error'))) {
             return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
         }
         return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });

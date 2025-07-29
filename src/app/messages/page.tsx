@@ -12,7 +12,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { format, formatDistanceToNow, isToday, isYesterday } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
 function formatTimestamp(timestamp: Date | string) {
@@ -26,7 +25,7 @@ function formatTimestamp(timestamp: Date | string) {
     return format(date, 'P'); // e.g., 04/10/2024
 }
 
-function ConversationList({ conversations, loading }: { conversations: Conversation[], loading: boolean }) {
+function ConversationList({ conversations, loading, currentUserId }: { conversations: Conversation[], loading: boolean, currentUserId?: string | null }) {
     const router = useRouter();
 
     if (loading) {
@@ -51,21 +50,29 @@ function ConversationList({ conversations, loading }: { conversations: Conversat
 
     return (
         <nav className="divide-y-2 divide-foreground border-r-2 border-foreground">
-           {conversations.map(convo => (
-               <Link key={convo._id?.toString()} href={`/messages/${convo._id!.toString()}`} className="w-full flex items-center gap-3 p-3 text-left hover:bg-secondary">
-                   <Avatar>
-                       <AvatarImage src={convo.participant?.avatar} />
-                       <AvatarFallback>{convo.participant?.name.charAt(0)}</AvatarFallback>
-                   </Avatar>
-                   <div className="flex-1 overflow-hidden">
-                       <div className="flex justify-between items-baseline">
-                         <p className="font-semibold truncate">{convo.participant?.name}</p>
-                         {convo.lastMessage?.timestamp && <span className="text-xs text-muted-foreground whitespace-nowrap">{formatTimestamp(convo.lastMessage.timestamp)}</span>}
-                       </div>
-                       <p className="text-sm text-muted-foreground truncate">{convo.lastMessage?.content}</p>
-                   </div>
-               </Link>
-           ))}
+           {conversations.map(convo => {
+               if (!convo.participant) return null; // Skip convos without participant data
+
+               const lastMessage = convo.lastMessage;
+               const isUnread = lastMessage && lastMessage.senderId !== currentUserId && !lastMessage.readBy.includes(currentUserId!);
+
+               return (
+                 <Link key={convo._id?.toString()} href={`/messages/${convo._id!.toString()}`} className="w-full flex items-center gap-3 p-3 text-left hover:bg-secondary">
+                     <Avatar>
+                         <AvatarImage src={convo.participant?.avatar} />
+                         <AvatarFallback>{convo.participant?.name.charAt(0)}</AvatarFallback>
+                     </Avatar>
+                     <div className="flex-1 overflow-hidden">
+                         <div className="flex justify-between items-baseline">
+                           <p className={cn("truncate", isUnread ? "font-bold" : "font-semibold")}>{convo.participant?.name}</p>
+                           {convo.lastMessage?.timestamp && <span className="text-xs text-muted-foreground whitespace-nowrap">{formatTimestamp(convo.lastMessage.timestamp)}</span>}
+                         </div>
+                         <p className={cn("text-sm truncate", isUnread ? "text-foreground font-medium" : "text-muted-foreground")}>{convo.lastMessage?.content || '...'}</p>
+                     </div>
+                     {isUnread && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
+                 </Link>
+               )
+            })}
         </nav>
     )
 }
@@ -152,7 +159,7 @@ export default function MessagesPage() {
                     <h1 className="text-2xl font-headline font-bold">Messages</h1>
                 </header>
                 <main className="flex-1 overflow-y-auto">
-                    <ConversationList conversations={conversations} loading={loadingConvos} />
+                    <ConversationList conversations={conversations} loading={loadingConvos} currentUserId={user?.id} />
                 </main>
             </div>
         </div>

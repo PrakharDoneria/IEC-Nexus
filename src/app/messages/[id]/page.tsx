@@ -11,13 +11,48 @@ import { Input } from "@/components/ui/input";
 import { NeoButton } from "@/components/NeoButton";
 import { Message, User } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { Loader2, Send, ArrowLeft, ImagePlus, X } from "lucide-react";
+import { Loader2, Send, ArrowLeft, ImagePlus, X, ThumbsUp, Trash2, Pencil, Smile, MoreHorizontal } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { formatDistanceToNow } from "date-fns";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 const MAX_IMAGE_SIZE_MB = 5;
+
+
+function MessageActions({ message, onAction }: { message: Message, onAction: (action: 'edit' | 'delete' | 'react') => void }) {
+    return (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full">
+                    <MoreHorizontal className="h-4 w-4" />
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="border-2 border-foreground shadow-[4px_4px_0px_hsl(var(--foreground))]">
+                <DropdownMenuItem onClick={() => onAction('react')}>
+                    <ThumbsUp className="mr-2 h-4 w-4" />
+                    <span>React</span>
+                </DropdownMenuItem>
+                 <DropdownMenuItem onClick={() => onAction('edit')}>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    <span>Edit</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onAction('delete')} className="text-destructive focus:text-destructive">
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    <span>Delete</span>
+                </DropdownMenuItem>
+            </DropdownMenuContent>
+        </DropdownMenu>
+    )
+}
+
 
 export default function ChatPage() {
     const { user, idToken, authLoading } = useAuth();
@@ -32,13 +67,14 @@ export default function ChatPage() {
     const [sending, setSending] = useState(false);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [imageData, setImageData] = useState<string | null>(null);
+    const [editingMessage, setEditingMessage] = useState<Message | null>(null);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const isFetching = useRef(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView();
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
 
     const fetchMessages = useCallback(async (isBackground = false) => {
@@ -69,7 +105,7 @@ export default function ChatPage() {
 
     useEffect(() => {
         if (conversationId && idToken) {
-            fetchMessages(false); // Initial fetch shows loader
+            fetchMessages(false); 
         }
     }, [conversationId, idToken, fetchMessages]);
 
@@ -77,14 +113,13 @@ export default function ChatPage() {
        if (messages.length > 0) {
             scrollToBottom();
        }
-    }, [messages]);
+    }, [messages.length]);
 
     useEffect(() => {
-         if (!idToken) return;
-        // Poll for new messages every 5 seconds
-        const intervalId = setInterval(() => fetchMessages(true), 5000); // Background fetches don't show loader
+        if (!idToken || !conversationId) return;
+        const intervalId = setInterval(() => fetchMessages(true), 5000); 
         return () => clearInterval(intervalId);
-    }, [idToken, fetchMessages])
+    }, [idToken, conversationId, fetchMessages])
 
     const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -112,6 +147,29 @@ export default function ChatPage() {
         if ((!newMessage.trim() && !imageData) || !conversationId) return;
 
         setSending(true);
+
+        // If we are editing a message
+        if (editingMessage) {
+            try {
+                const res = await fetch(`/api/messages/${conversationId}/${editingMessage._id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+                    body: JSON.stringify({ content: newMessage })
+                });
+                 if (!res.ok) throw new Error("Failed to edit message");
+                 setMessages(prev => prev.map(m => m._id === editingMessage._id ? {...m, content: newMessage, isEdited: true} : m));
+                 toast({ title: "Message Edited" });
+            } catch (error) {
+                 toast({ variant: 'destructive', title: 'Error', description: 'Could not edit message.'});
+            } finally {
+                setEditingMessage(null);
+                setNewMessage("");
+                setSending(false);
+            }
+            return;
+        }
+
+        // If we are sending a new message
         try {
             const res = await fetch(`/api/messages/${conversationId}`, {
                 method: 'POST',
@@ -130,6 +188,42 @@ export default function ChatPage() {
             setSending(false);
         }
     }
+
+    const handleMessageAction = async (message: Message, action: 'edit' | 'delete' | 'react') => {
+        if (!idToken) return;
+
+        if (action === 'edit') {
+            setEditingMessage(message);
+            setNewMessage(message.content);
+        } else if (action === 'delete') {
+            if (!confirm("Are you sure you want to delete this message?")) return;
+            try {
+                const res = await fetch(`/api/messages/${conversationId}/${message._id}`, {
+                    method: 'DELETE', headers: { 'Authorization': `Bearer ${idToken}` }
+                });
+                if (!res.ok) throw new Error("Failed to delete message");
+                setMessages(prev => prev.filter(m => m._id !== message._id));
+                toast({ title: "Message Deleted" });
+            } catch (error) {
+                 toast({ variant: 'destructive', title: 'Error', description: 'Could not delete message.'});
+            }
+        } else if (action === 'react') {
+            const emoji = '👍'; // Hardcoding a thumbs up for now
+             try {
+                const res = await fetch(`/api/messages/${conversationId}/${message._id}/react`, {
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+                    body: JSON.stringify({ emoji })
+                });
+                 if (!res.ok) throw new Error("Failed to react to message");
+                const data = await res.json();
+                 setMessages(prev => prev.map(m => m._id === message._id ? {...m, reactions: data.reactions} : m));
+            } catch (error) {
+                 toast({ variant: 'destructive', title: 'Error', description: 'Could not react to message.'});
+            }
+        }
+    }
+
 
      if (authLoading || loading) {
         return (
@@ -167,33 +261,55 @@ export default function ChatPage() {
                     </Link>
                 </header>
 
-                <main className="flex-1 overflow-y-auto p-4 space-y-4 bg-secondary/50">
-                    {messages.map((msg, index) => (
-                        <div key={msg._id?.toString() || index} className={cn("flex items-end gap-2", msg.senderId === user?.id ? "justify-end" : "justify-start")}>
-                            {msg.senderId !== user?.id && (
-                                <Avatar className="h-8 w-8 self-start">
-                                    <AvatarImage src={msg.sender?.avatar} />
-                                    <AvatarFallback>{msg.sender?.name.charAt(0)}</AvatarFallback>
-                                </Avatar>
-                            )}
-                            <div className={cn(
-                                "max-w-xs md:max-w-md lg:max-w-lg p-1 rounded-xl border-2 border-foreground", 
-                                msg.senderId === user?.id ? "bg-primary text-primary-foreground rounded-br-none" : "bg-card rounded-bl-none"
-                            )}>
-                                {msg.imageUrl && (
-                                    <Image src={msg.imageUrl} alt="Chat image" width={300} height={300} className="rounded-lg object-cover" />
+                <main className="flex-1 overflow-y-auto p-4 space-y-2 bg-secondary/50">
+                    {messages.map((msg, index) => {
+                        const isOwnMessage = msg.senderId === user?.id;
+                        return (
+                            <div key={msg._id?.toString() || index} className={cn("flex items-end gap-2 group", isOwnMessage ? "justify-end" : "justify-start")}>
+                                {isOwnMessage && <div className="opacity-0 group-hover:opacity-100 transition-opacity"><MessageActions message={msg} onAction={(action) => handleMessageAction(msg, action)}/></div>}
+                                {!isOwnMessage && (
+                                    <Avatar className="h-8 w-8 self-start">
+                                        <AvatarImage src={msg.sender?.avatar} />
+                                        <AvatarFallback>{msg.sender?.name.charAt(0)}</AvatarFallback>
+                                    </Avatar>
                                 )}
-                                {msg.content && <p className="p-2 whitespace-pre-wrap">{msg.content}</p>}
+                                <div className={cn(
+                                    "max-w-xs md:max-w-md lg:max-w-lg p-1 rounded-xl border-2 border-foreground relative", 
+                                    isOwnMessage ? "bg-primary text-primary-foreground rounded-br-none" : "bg-card rounded-bl-none"
+                                )}>
+                                    {msg.imageUrl && (
+                                        <Image src={msg.imageUrl} alt="Chat image" width={300} height={300} className="rounded-lg object-cover" />
+                                    )}
+                                    {msg.content && <p className="p-2 whitespace-pre-wrap">{msg.content}</p>}
+                                    {msg.isEdited && <p className="text-xs px-2 pb-1 opacity-70">(edited)</p>}
+                                    {(msg.reactions?.length || 0) > 0 && (
+                                        <div className="absolute -bottom-3 -right-1 bg-secondary border border-foreground rounded-full px-1.5 py-0.5 text-xs">
+                                           👍 {msg.reactions?.length}
+                                        </div>
+                                    )}
+                                </div>
+                                {!isOwnMessage && <div className="opacity-0 group-hover:opacity-100 transition-opacity"><MessageActions message={msg} onAction={(action) => handleMessageAction(msg, action)}/></div>}
                             </div>
-                        </div>
-                    ))}
+                        )
+                    })}
                     <div ref={messagesEndRef} />
                 </main>
 
                 <footer className="p-4 border-t-2 border-foreground bg-card shrink-0">
+                     {editingMessage && (
+                        <div className="flex items-center justify-between bg-secondary p-2 rounded-md mb-2 border border-foreground">
+                            <div>
+                                <p className="font-bold text-sm">Editing Message</p>
+                                <p className="text-xs text-muted-foreground truncate">{editingMessage.content}</p>
+                            </div>
+                            <Button size="icon" variant="ghost" onClick={() => { setEditingMessage(null); setNewMessage(""); }}>
+                                <X className="h-4 w-4"/>
+                            </Button>
+                        </div>
+                    )}
                     {imagePreview && (
                         <div className="relative w-24 h-24 mb-2">
-                            <Image src={imagePreview} alt="Image preview" layout="fill" className="object-cover rounded-md" />
+                            <Image src={imagePreview} alt="Image preview" fill className="object-cover rounded-md" />
                             <Button size="icon" variant="destructive" className="absolute -top-2 -right-2 h-6 w-6 rounded-full" onClick={() => { setImagePreview(null); setImageData(null); if(fileInputRef.current) fileInputRef.current.value = ""; }}>
                                 <X className="h-4 w-4" />
                             </Button>

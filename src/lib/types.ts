@@ -46,6 +46,11 @@ export type Group = {
   memberCount?: number; // This can be derived or stored
 };
 
+export type Reaction = {
+  userId: string;
+  emoji: string;
+};
+
 export type Message = {
     _id?: ObjectId;
     conversationId: ObjectId;
@@ -53,6 +58,9 @@ export type Message = {
     content: string;
     imageUrl?: string; // For image messages
     timestamp: Date;
+    readBy: string[]; // Array of user IDs who have read the message
+    reactions?: Reaction[];
+    isEdited?: boolean;
     sender?: User; // populated
 };
 
