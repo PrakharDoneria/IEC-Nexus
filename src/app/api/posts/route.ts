@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
             content: 1,
             timestamp: 1,
             likes: 1,
-            comments: 1,
+            commentCount: 1,
             resourceLink: 1,
             authorId: 1,
             author: {
@@ -85,8 +85,8 @@ export async function POST(req: NextRequest) {
       content,
       resourceLink: resourceLink || null,
       timestamp: new Date(),
-      likes: 0,
-      comments: 0,
+      likes: [],
+      commentCount: 0,
     };
 
     await db.collection('posts').insertOne(newPost);
@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
             content: 1,
             timestamp: 1,
             likes: 1,
-            comments: 1,
+            commentCount: 1,
             resourceLink: 1,
             authorId: 1,
             author: {

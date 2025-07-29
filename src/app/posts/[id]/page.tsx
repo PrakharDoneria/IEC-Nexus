@@ -8,8 +8,8 @@ import { MobileNav } from "@/components/layout/MobileNav";
 import { NeoCard, NeoCardContent, NeoCardFooter, NeoCardHeader } from "@/components/NeoCard";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Post } from "@/lib/types";
-import { ThumbsUp, MessageCircle, Link as LinkIcon, MoreVertical, Trash2, Loader2 } from "lucide-react";
+import { Post, Comment } from "@/lib/types";
+import { ThumbsUp, MessageCircle, Link as LinkIcon, MoreVertical, Trash2, Loader2, Send } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,9 +18,39 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from '@/hooks/useAuth';
 import { formatDistanceToNow } from 'date-fns';
+import { cn } from '@/lib/utils';
+import { toast } from '@/hooks/use-toast';
+import { Textarea } from '@/components/ui/textarea';
 
-function SinglePostCard({ post }: { post: Post }) {
-    const { user } = useAuth();
+function SinglePostCard({ post: initialPost }: { post: Post }) {
+    const { user, idToken } = useAuth();
+    const [post, setPost] = React.useState(initialPost);
+    const [isLiked, setIsLiked] = React.useState(post.likes.includes(user?.id ?? ''));
+
+     React.useEffect(() => {
+        setIsLiked(post.likes.includes(user?.id ?? ''))
+    }, [user, post.likes]);
+
+     const handleLike = async () => {
+        if (!idToken) return;
+        const originalLikes = post.likes;
+        const newIsLiked = !isLiked;
+        
+        setPost(prev => ({ ...prev, likes: newIsLiked ? [...prev.likes, user!.id] : prev.likes.filter(id => id !== user!.id) }));
+        setIsLiked(newIsLiked);
+
+        try {
+            const response = await fetch(`/api/posts/${post._id}/like`, { method: 'POST', headers: { 'Authorization': `Bearer ${idToken}` } });
+            if (!response.ok) throw new Error('Failed to like post');
+            const data = await response.json();
+            setPost(prev => ({...prev, likes: data.likes}));
+            setIsLiked(data.isLiked);
+        } catch (error) {
+            setPost(prev => ({ ...prev, likes: originalLikes }));
+            setIsLiked(!newIsLiked);
+            toast({ variant: "destructive", title: "Error", description: "Could not update like." });
+        }
+    };
     
     if (!post || !post.author) {
         return null;
@@ -28,7 +58,7 @@ function SinglePostCard({ post }: { post: Post }) {
 
     return (
         <NeoCard className="max-w-3xl mx-auto">
-        <NeoCardHeader className="p-4">
+        <NeoCardHeader className="p-4 sm:p-6 pb-2">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                 <Avatar>
@@ -57,7 +87,7 @@ function SinglePostCard({ post }: { post: Post }) {
                 )}
             </div>
         </NeoCardHeader>
-        <NeoCardContent className="p-4 pt-0">
+        <NeoCardContent className="px-4 sm:px-6 py-4">
             <p className="whitespace-pre-wrap text-lg">{post.content}</p>
             {post.resourceLink && (
                 <a href={post.resourceLink} target="_blank" rel="noopener noreferrer" className="mt-4 flex items-center gap-3 p-3 bg-secondary rounded-md border-2 border-foreground hover:bg-primary/20">
@@ -66,49 +96,132 @@ function SinglePostCard({ post }: { post: Post }) {
                 </a>
             )}
         </NeoCardContent>
-        <NeoCardFooter className="p-4 pt-0">
+        <NeoCardFooter className="p-4 sm:p-6 pt-2 border-t-2 border-foreground">
             <div className="flex items-center gap-4 text-muted-foreground">
-            <Button variant="ghost" size="sm" className="flex items-center gap-2">
-                <ThumbsUp className="h-5 w-5" /> {post.likes}
+            <Button variant="ghost" size="sm" className="flex items-center gap-2" onClick={handleLike}>
+                <ThumbsUp className={cn("h-5 w-5", isLiked && "text-primary fill-primary")} /> {post.likes.length} Likes
             </Button>
-            <Button variant="ghost" size="sm" className="flex items-center gap-2">
-                <MessageCircle className="h-5 w-5" /> {post.comments}
-            </Button>
+            <div className="flex items-center gap-2">
+                <MessageCircle className="h-5 w-5" /> {post.commentCount} Comments
+            </div>
             </div>
         </NeoCardFooter>
         </NeoCard>
     );
 }
 
+function CommentCard({ comment }: { comment: Comment }) {
+    return (
+        <div className="flex gap-3">
+            <Avatar className="h-9 w-9">
+                <AvatarImage src={comment.author?.avatar} />
+                <AvatarFallback>{comment.author?.name.charAt(0)}</AvatarFallback>
+            </Avatar>
+            <div className="flex-1 bg-secondary p-3 rounded-lg border-2 border-foreground">
+                <div className="flex items-baseline gap-2">
+                    <p className="font-bold">{comment.author?.name}</p>
+                    <p className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(comment.timestamp), { addSuffix: true })}</p>
+                </div>
+                <p className="mt-1">{comment.content}</p>
+            </div>
+        </div>
+    )
+}
+
+function CommentSection({ postId, onCommentAdded }: { postId: string, onCommentAdded: () => void }) {
+    const { user, idToken } = useAuth();
+    const [comments, setComments] = React.useState<Comment[]>([]);
+    const [loading, setLoading] = React.useState(true);
+    const [commentText, setCommentText] = React.useState("");
+    const [posting, setPosting] = React.useState(false);
+
+    React.useEffect(() => {
+        const fetchComments = async () => {
+            setLoading(true);
+            const res = await fetch(`/api/posts/${postId}/comments`);
+            const data = await res.json();
+            setComments(data);
+            setLoading(false);
+        };
+        fetchComments();
+    }, [postId]);
+
+    const handlePostComment = async () => {
+        if (!commentText.trim() || !idToken) return;
+        setPosting(true);
+        try {
+            const res = await fetch(`/api/posts/${postId}/comments`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+                body: JSON.stringify({ content: commentText })
+            });
+            if (!res.ok) throw new Error("Failed to post comment");
+            const newComment = await res.json();
+            setComments(prev => [...prev, newComment]);
+            setCommentText("");
+            onCommentAdded();
+        } catch (err) {
+            toast({ variant: 'destructive', title: 'Error', description: "Could not post your comment."});
+        } finally {
+            setPosting(false);
+        }
+    };
+    
+    return (
+        <div className="max-w-3xl mx-auto mt-6">
+            <h2 className="font-headline text-2xl font-bold mb-4">Comments</h2>
+            {user && (
+                <div className="flex gap-3 mb-6">
+                    <Avatar>
+                        <AvatarImage src={user.avatar} />
+                        <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 flex gap-2">
+                        <Textarea placeholder="Add a comment..." value={commentText} onChange={(e) => setCommentText(e.target.value)} className="border-2 border-foreground" />
+                        <Button size="icon" onClick={handlePostComment} disabled={posting}>
+                            {posting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+                        </Button>
+                    </div>
+                </div>
+            )}
+            <div className="space-y-4">
+                {loading && <Loader2 className="mx-auto h-8 w-8 animate-spin" />}
+                {!loading && comments.length === 0 && <p className="text-muted-foreground text-center">No comments yet. Be the first!</p>}
+                {!loading && comments.map(c => <CommentCard key={c._id?.toString()} comment={c} />)}
+            </div>
+        </div>
+    )
+}
 
 export default function PostPage() {
   const params = useParams();
-  const postId = params.id;
+  const postId = params.id as string;
   const [post, setPost] = React.useState<Post | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  React.useEffect(() => {
+  const fetchPost = React.useCallback(async () => {
     if (postId) {
-      const fetchPost = async () => {
-        setLoading(true);
-        setError(null);
-        try {
-          const res = await fetch(`/api/posts/${postId}`);
-          if (!res.ok) {
-            throw new Error('Post not found');
-          }
-          const data = await res.json();
-          setPost(data);
-        } catch (err) {
-          setError(err.message);
-        } finally {
-          setLoading(false);
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch(`/api/posts/${postId}`);
+        if (!res.ok) {
+          throw new Error('Post not found');
         }
-      };
-      fetchPost();
+        const data = await res.json();
+        setPost(data);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
     }
   }, [postId]);
+
+  React.useEffect(() => {
+    fetchPost();
+  }, [fetchPost]);
 
   const renderContent = () => {
     if (loading) {
@@ -132,6 +245,7 @@ export default function PostPage() {
                 </header>
                 <main className="flex-1 p-4 md:p-6 lg:p-8">
                     <SinglePostCard post={post} />
+                    <CommentSection postId={postId} onCommentAdded={fetchPost}/>
                 </main>
             </>
         );

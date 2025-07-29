@@ -32,6 +32,8 @@ import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { formatDistanceToNow } from 'date-fns';
+import { cn } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
 
 function CreatePost({ onAddPost }: { onAddPost: (newPost: Post) => void }) {
   const [postContent, setPostContent] = useState('');
@@ -86,7 +88,7 @@ function CreatePost({ onAddPost }: { onAddPost: (newPost: Post) => void }) {
           <div className="w-full">
             <Textarea
               placeholder={`What's on your mind, ${user?.name?.split(' ')[0]}?`}
-              className="min-h-24 border-2 border-foreground mb-4"
+              className="min-h-24 border-2 border-foreground mb-4 bg-secondary text-base"
               value={postContent}
               onChange={(e) => setPostContent(e.target.value)}
               disabled={loading}
@@ -130,7 +132,7 @@ function ShareDialog({ post }: { post: Post }) {
      <Dialog>
       <DialogTrigger asChild>
         <Button variant="ghost" size="sm" className="flex items-center gap-2">
-            <Share2 className="h-5 w-5" /> Share
+            <Share2 className="h-5 w-5" /> <span className="hidden sm:inline">Share</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-2xl border-2 border-foreground shadow-[4px_4px_0px_hsl(var(--foreground))]">
@@ -162,12 +164,54 @@ function ShareDialog({ post }: { post: Post }) {
 }
 
 
-function PostCard({ post, currentUser }: { post: Post, currentUser: any }) {
+function PostCard({ post: initialPost, currentUser }: { post: Post, currentUser: any }) {
+  const { idToken } = useAuth();
+  const router = useRouter();
+  const [post, setPost] = useState(initialPost);
+  const [isLiked, setIsLiked] = useState(post.likes.includes(currentUser?.id));
+
   const formattedTimestamp = formatDistanceToNow(new Date(post.timestamp), { addSuffix: true });
+
+  const handleLike = async () => {
+    if (!idToken) return;
+
+    // Optimistic update
+    const originalLikes = post.likes;
+    const newIsLiked = !isLiked;
+    const newLikesCount = newIsLiked ? post.likes.length + 1 : post.likes.length - 1;
+    
+    setPost(prev => ({
+        ...prev,
+        likes: newIsLiked ? [...prev.likes, currentUser.id] : prev.likes.filter(id => id !== currentUser.id),
+    }));
+    setIsLiked(newIsLiked);
+
+    try {
+      const response = await fetch(`/api/posts/${post._id}/like`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${idToken}` },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to like post');
+      }
+
+      const data = await response.json();
+      // Update with server state
+      setPost(prev => ({...prev, likes: data.likes}));
+      setIsLiked(data.isLiked);
+
+    } catch (error) {
+      // Revert on error
+      setPost(prev => ({ ...prev, likes: originalLikes }));
+      setIsLiked(!newIsLiked);
+      toast({ variant: "destructive", title: "Error", description: "Could not update like." });
+    }
+  };
 
   return (
     <NeoCard>
-      <NeoCardHeader className="p-4">
+      <NeoCardHeader className="p-4 pb-2 sm:p-6 sm:pb-2">
         <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Avatar>
@@ -196,7 +240,7 @@ function PostCard({ post, currentUser }: { post: Post, currentUser: any }) {
             )}
         </div>
       </NeoCardHeader>
-      <NeoCardContent className="p-4 pt-0">
+      <NeoCardContent className="px-4 sm:px-6 py-4">
         <p className="whitespace-pre-wrap">{post.content}</p>
         {post.resourceLink && (
             <a href={post.resourceLink} target="_blank" rel="noopener noreferrer" className="mt-4 flex items-center gap-3 p-3 bg-secondary rounded-md border-2 border-foreground hover:bg-primary/20">
@@ -205,13 +249,13 @@ function PostCard({ post, currentUser }: { post: Post, currentUser: any }) {
             </a>
         )}
       </NeoCardContent>
-      <NeoCardFooter className="p-4 pt-0">
+      <NeoCardFooter className="p-4 sm:p-6 pt-0">
         <div className="flex items-center gap-1 text-muted-foreground">
-          <Button variant="ghost" size="sm" className="flex items-center gap-2">
-            <ThumbsUp className="h-5 w-5" /> {post.likes}
+          <Button variant="ghost" size="sm" className="flex items-center gap-2" onClick={handleLike}>
+            <ThumbsUp className={cn("h-5 w-5", isLiked && "text-primary fill-primary")} /> {post.likes.length}
           </Button>
-          <Button variant="ghost" size="sm" className="flex items-center gap-2">
-            <MessageCircle className="h-5 w-5" /> {post.comments}
+          <Button variant="ghost" size="sm" className="flex items-center gap-2" onClick={() => router.push(`/posts/${post._id}`)}>
+            <MessageCircle className="h-5 w-5" /> {post.commentCount}
           </Button>
            <ShareDialog post={post} />
         </div>
@@ -222,13 +266,12 @@ function PostCard({ post, currentUser }: { post: Post, currentUser: any }) {
 
 function RightSidebar() {
     return (
-        <aside className="hidden lg:block w-80 space-y-6">
+        <aside className="hidden lg:block w-80 xl:w-96 space-y-6">
             <NeoCard>
                 <NeoCardHeader className="p-4">
                     <h2 className="font-headline font-bold text-lg flex items-center gap-2"><Users className="h-5 w-5"/> My Groups</h2>
                 </NeoCardHeader>
                 <NeoCardContent className="p-4 pt-0 space-y-3">
-                   {/* This will be populated with live data */}
                    <p className="text-sm text-muted-foreground">You are not part of any groups yet.</p>
                 </NeoCardContent>
                 <NeoCardFooter className="p-4 pt-0">
@@ -253,6 +296,33 @@ function RightSidebar() {
             </NeoCard>
         </aside>
     )
+}
+
+function SearchBar() {
+  const [query, setQuery] = useState('');
+  const router = useRouter();
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (query.trim()) {
+      router.push(`/search?q=${encodeURIComponent(query.trim())}`);
+    }
+  }
+
+  return (
+    <form onSubmit={handleSearch}>
+        <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Input 
+              type="search" 
+              placeholder="Search users..." 
+              className="pl-10 border-2 border-foreground"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+        </div>
+    </form>
+  )
 }
 
 export default function FeedPage() {
@@ -302,17 +372,12 @@ export default function FeedPage() {
       <AppSidebar />
       <div className="flex-1 flex flex-col">
         <MobileNav />
-        <header className="hidden md:flex h-16 items-center gap-4 border-b-2 border-foreground bg-card px-4 md:px-6">
+        <header className="hidden md:flex h-16 items-center justify-between gap-4 border-b-2 border-foreground bg-card px-4 md:px-6">
             <div className="flex-1">
                 <h1 className="text-2xl font-headline font-bold">Activity Feed</h1>
             </div>
             <div className="w-full max-w-sm">
-                <form>
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                        <Input type="search" placeholder="Search posts and resources..." className="pl-10 border-2 border-foreground"/>
-                    </div>
-                </form>
+                <SearchBar />
             </div>
         </header>
         <main className="flex-1 p-4 md:p-6 lg:p-8 flex gap-8">

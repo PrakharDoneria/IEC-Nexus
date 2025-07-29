@@ -12,23 +12,35 @@ export type User = {
   followers?: string[];
 };
 
+export type Comment = {
+  _id?: ObjectId;
+  authorId: string;
+  postId: ObjectId;
+  content: string;
+  timestamp: Date;
+  author?: User; // Populated from the users collection
+}
+
 export type Post = {
-  _id?: ObjectId | string;
+  _id?: ObjectId;
   authorId: string;
   author: User;
   content: string;
   timestamp: string | Date;
-  likes: number;
-  comments: number;
+  likes: string[]; // Array of user IDs who liked the post
+  commentCount: number;
   resourceLink?: string;
 };
 
 export type Group = {
-  id: string;
+  _id?: ObjectId;
   name: string;
   description: string;
-  memberCount: number;
   coverImage: string;
+  members: string[]; // Array of user IDs
+  createdBy: string; // User ID
+  inviteCode: string;
+  memberCount?: number; // This can be derived or stored
 };
 
 export type Message = {

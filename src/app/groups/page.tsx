@@ -1,11 +1,14 @@
 
+"use client";
+
+import React, { useState, useEffect } from 'react';
 import Image from "next/image";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { NeoCard, NeoCardContent, NeoCardFooter, NeoCardHeader } from "@/components/NeoCard";
 import { NeoButton } from "@/components/NeoButton";
 import { Group } from "@/lib/types";
-import { Plus, LogIn } from "lucide-react";
+import { Plus, LogIn, Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -18,38 +21,9 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button";
-
-const mockGroups: Group[] = [
-  {
-    id: '1',
-    name: 'CS & Engineering',
-    description: 'Discussions about computer science, software engineering, and technology trends.',
-    memberCount: 128,
-    coverImage: 'https://placehold.co/400x150/A7C4D3/000000'
-  },
-  {
-    id: '2',
-    name: 'AI & Machine Learning Club',
-    description: 'A place for AI enthusiasts to share projects, papers, and ideas.',
-    memberCount: 89,
-    coverImage: 'https://placehold.co/400x150/D3A7C4/000000'
-  },
-  {
-    id: '3',
-    name: 'Campus Photography',
-    description: 'Share your best shots of the campus and learn new photography techniques.',
-    memberCount: 54,
-    coverImage: 'https://placehold.co/400x150/C4D3A7/000000'
-  },
-    {
-    id: '4',
-    name: 'Final Year Projects',
-    description: 'Collaborate and get help with your final year engineering projects.',
-    memberCount: 72,
-    coverImage: 'https://placehold.co/400x150/A7A7D3/000000'
-  },
-];
-
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from '@/hooks/use-toast';
+import { Textarea } from '@/components/ui/textarea';
 
 function GroupCard({ group }: { group: Group }) {
     return (
@@ -59,7 +33,7 @@ function GroupCard({ group }: { group: Group }) {
             </div>
             <NeoCardHeader className="p-4">
                 <h3 className="font-headline text-xl font-bold">{group.name}</h3>
-                <p className="text-sm text-muted-foreground h-10">{group.description}</p>
+                <p className="text-sm text-muted-foreground h-10 overflow-hidden">{group.description}</p>
             </NeoCardHeader>
             <NeoCardFooter className="p-4 pt-2 flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">{group.memberCount} members</span>
@@ -69,9 +43,42 @@ function GroupCard({ group }: { group: Group }) {
     )
 }
 
-function JoinGroupDialog() {
+function JoinGroupDialog({ onGroupJoined }: { onGroupJoined: () => void }) {
+    const { idToken } = useAuth();
+    const [loading, setLoading] = useState(false);
+    const [open, setOpen] = useState(false);
+    const [code, setCode] = useState("");
+
+    const handleJoin = async () => {
+        if (!code.trim() || !idToken) return;
+        setLoading(true);
+
+        try {
+            const res = await fetch('/api/groups/join', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${idToken}` 
+                },
+                body: JSON.stringify({ inviteCode: code }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message || 'Failed to join group');
+            
+            toast({ title: "Success", description: `You have joined the group!` });
+            onGroupJoined();
+            setOpen(false);
+            setCode("");
+
+        } catch (error: any) {
+            toast({ variant: "destructive", title: "Error", description: error.message });
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
-        <Dialog>
+        <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
                 <NeoButton variant="secondary"><LogIn className="mr-2 h-4 w-4" /> Join Group</NeoButton>
             </DialogTrigger>
@@ -87,20 +94,58 @@ function JoinGroupDialog() {
                         <Label htmlFor="code" className="text-right">
                             Invite Code
                         </Label>
-                        <Input id="code" placeholder="abc-123" className="col-span-3 border-2 border-foreground" />
+                        <Input id="code" value={code} onChange={(e) => setCode(e.target.value)} placeholder="abc-123" className="col-span-3 border-2 border-foreground" />
                     </div>
                 </div>
                 <DialogFooter>
-                    <NeoButton type="submit">Join</NeoButton>
+                    <NeoButton type="submit" onClick={handleJoin} disabled={loading}>
+                        {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                        Join
+                    </NeoButton>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
     )
 }
 
-function CreateGroupDialog() {
+function CreateGroupDialog({ onGroupCreated }: { onGroupCreated: () => void }) {
+    const { idToken } = useAuth();
+    const [loading, setLoading] = useState(false);
+    const [open, setOpen] = useState(false);
+    const [name, setName] = useState("");
+    const [description, setDescription] = useState("");
+
+    const handleCreate = async () => {
+        if (!name.trim() || !description.trim() || !idToken) return;
+        setLoading(true);
+
+        try {
+            const res = await fetch('/api/groups', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${idToken}` 
+                },
+                body: JSON.stringify({ name, description }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message || 'Failed to create group');
+
+            toast({ title: "Group Created!", description: `Invite code: ${data.inviteCode}` });
+            onGroupCreated();
+            setOpen(false);
+            setName("");
+            setDescription("");
+
+        } catch (error: any) {
+             toast({ variant: "destructive", title: "Error", description: error.message });
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
-        <Dialog>
+        <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
                 <NeoButton><Plus className="mr-2 h-4 w-4" /> Create Group</NeoButton>
             </DialogTrigger>
@@ -114,15 +159,18 @@ function CreateGroupDialog() {
                 <div className="grid gap-4 py-4">
                     <div className="space-y-2">
                         <Label htmlFor="name">Group Name</Label>
-                        <Input id="name" placeholder="e.g., AI & Machine Learning Club" className="border-2 border-foreground" />
+                        <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., AI & Machine Learning Club" className="border-2 border-foreground" />
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="description">Description</Label>
-                        <Input id="description" placeholder="A short description of your group" className="border-2 border-foreground" />
+                        <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="A short description of your group" className="border-2 border-foreground" />
                     </div>
                 </div>
                 <DialogFooter>
-                    <NeoButton type="submit">Create</NeoButton>
+                    <NeoButton type="submit" onClick={handleCreate} disabled={loading}>
+                        {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                        Create
+                    </NeoButton>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -130,6 +178,30 @@ function CreateGroupDialog() {
 }
 
 export default function GroupsPage() {
+    const [groups, setGroups] = useState<Group[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const fetchGroups = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const res = await fetch('/api/groups');
+            if (!res.ok) throw new Error("Failed to fetch groups");
+            const data = await res.json();
+            setGroups(data);
+        } catch (err: any) {
+            setError(err.message);
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not load groups.' });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchGroups();
+    }, []);
+
   return (
     <div className="flex min-h-screen bg-background">
       <AppSidebar />
@@ -138,14 +210,24 @@ export default function GroupsPage() {
         <header className="flex h-16 items-center justify-between border-b-2 border-foreground bg-card px-4 md:px-6">
             <h1 className="text-2xl font-headline font-bold">Groups</h1>
             <div className="flex items-center gap-2 sm:gap-4">
-                <JoinGroupDialog />
-                <CreateGroupDialog />
+                <JoinGroupDialog onGroupJoined={fetchGroups} />
+                <CreateGroupDialog onGroupCreated={fetchGroups} />
             </div>
         </header>
         <main className="flex-1 p-4 md:p-6 lg:p-8">
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {mockGroups.map(group => <GroupCard key={group.id} group={group} />)}
-            </div>
+            {loading && <div className="flex justify-center mt-8"><Loader2 className="h-10 w-10 animate-spin"/></div>}
+            {error && <p className="text-center text-destructive mt-8">{error}</p>}
+            {!loading && !error && (
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    {groups.map(group => <GroupCard key={group._id?.toString()} group={group} />)}
+                </div>
+            )}
+            {!loading && !error && groups.length === 0 && (
+                <div className="text-center mt-8">
+                    <h2 className="text-xl font-semibold">No groups found.</h2>
+                    <p className="text-muted-foreground">Why not create the first one?</p>
+                </div>
+            )}
         </main>
       </div>
     </div>
