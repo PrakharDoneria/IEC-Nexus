@@ -6,11 +6,10 @@ import Link from "next/link";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { NeoButton } from "@/components/NeoButton";
+import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Mail, Briefcase, GraduationCap, UserPlus, UserCheck, ShieldBan, Loader2, Edit, MessageSquare, Award, Link as LinkIcon } from "lucide-react";
 import { Post, User } from "@/lib/types";
-import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useParams, useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
@@ -18,20 +17,29 @@ import { toast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import Image from "next/image";
-import { NeoCard, NeoCardContent } from "@/components/NeoCard";
+import { NeoCard, NeoCardContent, NeoCardHeader } from "@/components/NeoCard";
 
 function ProfilePostCard({ post }: { post: Post }) {
   return (
     <NeoCard>
-      <NeoCardContent className="p-4">
-        <p className="text-sm text-muted-foreground mb-2">{formatDistanceToNow(new Date(post.timestamp), { addSuffix: true })}</p>
+        <NeoCardHeader className="flex flex-row items-center gap-3">
+             <Avatar className="h-11 w-11">
+                <AvatarImage src={post.author.avatar} data-ai-hint="user avatar" />
+                <AvatarFallback>{post.author.name.charAt(0)}</AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="font-bold">{post.author.name}</p>
+                <p className="text-sm text-muted-foreground">{formatDistanceToNow(new Date(post.timestamp), { addSuffix: true })}</p>
+              </div>
+        </NeoCardHeader>
+      <NeoCardContent className="pt-0">
         <p className="whitespace-pre-wrap">{post.content}</p>
         {post.resourceLink && (
             post.resourceLink.includes('stackblitz.com') ? (
                 <div className="mt-4 w-full aspect-[4/3] border rounded-md overflow-hidden">
-                    <iframe 
-                      src={post.resourceLink} 
-                      className="w-full h-full" 
+                    <iframe
+                      src={post.resourceLink}
+                      className="w-full h-full"
                       title="StackBlitz Code Embed"
                       allow="accelerometer; ambient-light-sensor; camera; encrypted-media; geolocation; gyroscope; hid; microphone; midi; payment; usb; vr; xr-spatial-tracking"
                       sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts"
@@ -53,7 +61,7 @@ function FollowButton({ profileUser, onFollowToggle }: { profileUser: User, onFo
     const { user, idToken, authLoading, refreshUser } = useAuth();
     const [isFollowing, setIsFollowing] = React.useState(user?.following?.includes(profileUser.id) ?? false);
     const [loading, setLoading] = React.useState(false);
-    
+
     React.useEffect(() => {
        if (user?.following) {
          setIsFollowing(user.following.includes(profileUser.id));
@@ -73,11 +81,11 @@ function FollowButton({ profileUser, onFollowToggle }: { profileUser: User, onFo
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.message);
-            
+
             setIsFollowing(data.isFollowing);
             onFollowToggle(data.isFollowing); // Callback to update profile page state
             await refreshUser(); // Refresh current user's following list
-            
+
         } catch(error: any) {
             toast({ variant: "destructive", title: "Error", description: error.message });
         } finally {
@@ -85,13 +93,13 @@ function FollowButton({ profileUser, onFollowToggle }: { profileUser: User, onFo
         }
     }
 
-    if (authLoading) return <NeoButton disabled><Loader2 className="h-4 w-4 animate-spin"/></NeoButton>;
+    if (authLoading) return <Button disabled><Loader2 className="h-4 w-4 animate-spin"/></Button>;
 
     return (
-        <NeoButton onClick={handleFollow} disabled={loading}>
+        <Button onClick={handleFollow} disabled={loading} variant={isFollowing ? 'secondary' : 'default'}>
             {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : isFollowing ? <UserCheck className="mr-2 h-4 w-4" /> : <UserPlus className="mr-2 h-4 w-4" />}
             {isFollowing ? 'Following' : 'Follow'}
-        </NeoButton>
+        </Button>
     )
 }
 
@@ -122,10 +130,10 @@ function BanButton({ profileUser, onBan }: { profileUser: User; onBan: () => voi
     }
 
     return (
-        <NeoButton variant="destructive" onClick={handleBan} disabled={loading}>
+        <Button variant="destructive" onClick={handleBan} disabled={loading}>
             {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <ShieldBan className="mr-2 h-4 w-4" />}
             Ban User
-        </NeoButton>
+        </Button>
     )
 }
 
@@ -137,10 +145,10 @@ function MessageButton({ profileUser }: { profileUser: User }) {
     }
 
     return (
-        <NeoButton variant="secondary" onClick={handleMessage}>
+        <Button variant="secondary" onClick={handleMessage}>
             <MessageSquare className="mr-2 h-4 w-4"/>
             Message
-        </NeoButton>
+        </Button>
     )
 }
 
@@ -164,7 +172,6 @@ function FollowListDialog({ userList, title }: { userList: User[], title: string
                                     <p className="text-sm text-muted-foreground">{user.role}</p>
                                 </div>
                             </Link>
-                            {/* You could add a follow button here too if desired */}
                         </div>
                     )) : (
                         <p className="text-muted-foreground text-center pt-4">This list is empty.</p>
@@ -185,7 +192,7 @@ export default function ProfilePage() {
   const [userPosts, setUserPosts] = React.useState<Post[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
-  
+
 
   const fetchProfile = React.useCallback(async () => {
         if (profileId) {
@@ -216,15 +223,15 @@ export default function ProfilePage() {
   React.useEffect(() => {
     fetchProfile();
   }, [fetchProfile]);
-  
+
   const handleUserBanned = () => {
     setProfileUser(prev => prev ? { ...prev, isBanned: true } : null);
   };
-  
+
    const handleFollowToggle = React.useCallback((isFollowing: boolean) => {
         setProfileUser(prev => {
             if (!prev || !currentUser) return prev;
-            
+
             const currentFollowers = (prev.followers || []) as User[];
             let newFollowers;
 
@@ -239,7 +246,7 @@ export default function ProfilePage() {
                 // Remove current user from followers list
                 newFollowers = currentFollowers.filter(u => u.id !== currentUser.id);
             }
-            
+
             return { ...prev, followers: newFollowers };
         });
     }, [currentUser]);
@@ -267,7 +274,7 @@ export default function ProfilePage() {
            </div>
       )
   }
-  
+
   if (profileUser.isBanned) {
       return (
            <div className="flex min-h-screen bg-background">
@@ -290,95 +297,110 @@ export default function ProfilePage() {
       <div className="flex-1 flex flex-col pb-16 md:pb-0">
         <MobileNav />
         <main className="flex-1">
-          {/* Cover Photo */}
-          <div className="h-32 sm:h-48 bg-primary relative">
-             <Avatar className="h-24 w-24 sm:h-32 sm:w-32 absolute -bottom-12 sm:-bottom-16 left-4 sm:left-8 border-4 border-background shadow-lg">
-                <AvatarImage src={profileUser.avatar} data-ai-hint="user avatar" />
-                <AvatarFallback className="text-4xl">{profileUser.name.slice(0,2)}</AvatarFallback>
-             </Avatar>
-          </div>
-          {/* Profile Header */}
-          <div className="bg-card px-4 sm:px-8 pt-16 sm:pt-20 pb-4 sm:pb-6">
-            <div className="flex flex-col sm:flex-row justify-between sm:items-start">
-              <div className="flex-1">
-                  <h1 className="text-3xl sm:text-4xl font-bold">{profileUser.name}</h1>
-                  <p className="text-muted-foreground text-base sm:text-lg">@{profileUser.name.toLowerCase().replace(' ', '').replace('.', '')}</p>
-                   <p className="mt-2 text-base">{profileUser.bio || "At IEC"}</p>
-                  <div className="flex gap-4 mt-2 text-sm">
-                    <Dialog>
-                        <DialogTrigger asChild>
-                            <button className="hover:underline">
-                                <span className="font-bold">{(profileUser.following as User[])?.length || 0}</span> Following
-                            </button>
-                        </DialogTrigger>
-                        <FollowListDialog userList={profileUser.following as User[] || []} title="Following"/>
-                    </Dialog>
-                     <Dialog>
-                        <DialogTrigger asChild>
-                           <button className="hover:underline">
-                                <span className="font-bold">{(profileUser.followers as User[])?.length || 0}</span> Followers
-                            </button>
-                        </DialogTrigger>
-                        <FollowListDialog userList={profileUser.followers as User[] || []} title="Followers"/>
-                    </Dialog>
-                  </div>
-              </div>
-              <div className="flex gap-2 mt-4 sm:mt-0">
-                {isOwnProfile ? (
-                  <Button asChild variant="secondary">
-                     <Link href="/settings/profile"><Edit className="mr-2 h-4 w-4"/> Edit Profile</Link>
-                  </Button>
-                ) : (
-                    <>
-                        <FollowButton profileUser={profileUser} onFollowToggle={handleFollowToggle} />
-                        <MessageButton profileUser={profileUser} />
-                    </>
-                )}
-                 {currentUser?.role === 'Faculty' && !isOwnProfile && (
-                        <BanButton profileUser={profileUser} onBan={handleUserBanned}/>
-                  )}
-              </div>
+          <div className="w-full bg-card">
+            <div className="h-32 sm:h-48 bg-primary relative">
+                <Image
+                    src="https://placehold.co/1200x300.png"
+                    alt="Cover image"
+                    width={1200}
+                    height={300}
+                    className="w-full h-full object-cover"
+                    data-ai-hint="header abstract"
+                />
+            </div>
+            <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="-mt-12 sm:-mt-16 sm:flex sm:items-end sm:space-x-5">
+                    <div className="flex">
+                        <Avatar className="h-24 w-24 sm:h-32 sm:w-32 ring-4 ring-background">
+                           <AvatarImage src={profileUser.avatar} data-ai-hint="user avatar" />
+                           <AvatarFallback className="text-4xl">{profileUser.name.slice(0,2)}</AvatarFallback>
+                        </Avatar>
+                    </div>
+                    <div className="mt-6 sm:flex-1 sm:min-w-0 sm:flex sm:items-center sm:justify-end sm:space-x-6 sm:pb-1">
+                        <div className="sm:hidden 2xl:block mt-6 min-w-0 flex-1">
+                            <h1 className="text-2xl font-bold text-foreground truncate">{profileUser.name}</h1>
+                            <p className="text-sm text-muted-foreground">@{profileUser.name.toLowerCase().replace(' ', '').replace('.', '')}</p>
+                        </div>
+                        <div className="mt-6 flex flex-col justify-stretch space-y-3 sm:flex-row sm:space-y-0 sm:space-x-4">
+                            {isOwnProfile ? (
+                              <Button asChild>
+                                 <Link href="/settings/profile"><Edit className="mr-2 h-4 w-4"/> Edit Profile</Link>
+                              </Button>
+                            ) : (
+                                <>
+                                    <MessageButton profileUser={profileUser} />
+                                    <FollowButton profileUser={profileUser} onFollowToggle={handleFollowToggle} />
+                                </>
+                            )}
+                             {currentUser?.role === 'Faculty' && !isOwnProfile && (
+                                    <BanButton profileUser={profileUser} onBan={handleUserBanned}/>
+                              )}
+                        </div>
+                    </div>
+                </div>
+                 <div className="hidden sm:block 2xl:hidden mt-6 min-w-0 flex-1">
+                    <h1 className="text-2xl font-bold text-foreground truncate">{profileUser.name}</h1>
+                    <p className="text-sm text-muted-foreground">@{profileUser.name.toLowerCase().replace(' ', '').replace('.', '')}</p>
+                </div>
             </div>
           </div>
           {/* Main Content */}
-          <div className="p-4 sm:p-8 grid md:grid-cols-3 gap-8">
+          <div className="max-w-5xl mx-auto p-4 sm:p-8 grid md:grid-cols-3 gap-8">
             {/* Left Column (About) */}
             <div className="md:col-span-1 space-y-6">
-                <Card>
-                    <CardHeader>
+                <NeoCard>
+                    <NeoCardHeader>
                         <h2 className="font-bold text-xl">About</h2>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                        <div className="flex items-center gap-3">
-                            <Mail className="h-5 w-5 text-muted-foreground"/>
-                            <span>{profileUser.email}</span>
+                    </NeoCardHeader>
+                    <NeoCardContent className="space-y-3 text-sm">
+                       <p>{profileUser.bio || "At IEC"}</p>
+                       <div className="flex items-center gap-3 pt-2">
+                            <Mail className="h-4 w-4 text-muted-foreground"/>
+                            <span className="text-muted-foreground">{profileUser.email}</span>
                         </div>
                         <div className="flex items-center gap-3">
                             {profileUser.role === 'Faculty' ? (
-                                <Briefcase className="h-5 w-5 text-muted-foreground"/>
+                                <Briefcase className="h-4 w-4 text-muted-foreground"/>
                             ) : (
-                                <GraduationCap className="h-5 w-5 text-muted-foreground"/>
+                                <GraduationCap className="h-4 w-4 text-muted-foreground"/>
                             )}
-                            <span>{profileUser.bio || "At IEC"}</span>
+                            <span className="text-muted-foreground">{profileUser.role}</span>
                         </div>
                          <div className="flex items-center gap-3">
-                            <Award className="h-5 w-5 text-muted-foreground"/>
-                            <span>{profileUser.score || 0} Points</span>
+                            <Award className="h-4 w-4 text-muted-foreground"/>
+                            <span className="text-muted-foreground">{profileUser.score || 0} Points</span>
                         </div>
-                    </CardContent>
-                </Card>
+                         <div className="flex gap-4 pt-2">
+                            <Dialog>
+                                <DialogTrigger asChild>
+                                    <button className="hover:underline">
+                                        <span className="font-bold">{(profileUser.following as User[])?.length || 0}</span> Following
+                                    </button>
+                                </DialogTrigger>
+                                <FollowListDialog userList={profileUser.following as User[] || []} title="Following"/>
+                            </Dialog>
+                             <Dialog>
+                                <DialogTrigger asChild>
+                                   <button className="hover:underline">
+                                        <span className="font-bold">{(profileUser.followers as User[])?.length || 0}</span> Followers
+                                    </button>
+                                </DialogTrigger>
+                                <FollowListDialog userList={profileUser.followers as User[] || []} title="Followers"/>
+                            </Dialog>
+                          </div>
+                    </NeoCardContent>
+                </NeoCard>
             </div>
             {/* Right Column (Posts) */}
             <div className="md:col-span-2 space-y-6">
-                <h2 className="font-bold text-2xl">Posts</h2>
                  {userPosts.length > 0 ? (
                     userPosts.map(post => <ProfilePostCard key={post._id?.toString()} post={post} />)
                 ) : (
-                    <Card>
-                      <CardContent className="p-6 text-center text-muted-foreground">
+                    <NeoCard>
+                      <NeoCardContent className="p-6 text-center text-muted-foreground">
                         This user hasn't posted anything yet.
-                      </CardContent>
-                    </Card>
+                      </NeoCardContent>
+                    </NeoCard>
                 )}
             </div>
           </div>
@@ -387,3 +409,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    
