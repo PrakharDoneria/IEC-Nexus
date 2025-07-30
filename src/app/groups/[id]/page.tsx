@@ -13,12 +13,25 @@ import { Textarea } from '@/components/ui/textarea';
 import { Group, GroupMessage, GroupAnnouncement, User } from '@/lib/types';
 import { useAuth } from '@/hooks/useAuth';
 import { useParams, useRouter } from 'next/navigation';
-import { Loader2, ArrowLeft, MessageSquare, Megaphone, Users, Settings, Send, Copy } from 'lucide-react';
+import { Loader2, ArrowLeft, MessageSquare, Megaphone, Users, Settings, Send, Copy, Camera, Trash2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { formatDistanceToNow } from 'date-fns';
 import { Label } from '@/components/ui/label';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+
+const MAX_IMAGE_SIZE_MB = 5;
 
 function ChatTab({ groupId, members }: { groupId: string, members: User[] }) {
     const { user, idToken } = useAuth();
@@ -257,28 +270,62 @@ function MembersTab({ members }: { members: User[] }) {
     )
 }
 
-function SettingsTab({ group, onGroupUpdated }: { group: Group, onGroupUpdated: () => void }) {
+function SettingsTab({ group, onGroupUpdated }: { group: Group, onGroupUpdated: (updatedGroup: Group) => void }) {
     const { idToken } = useAuth();
+    const router = useRouter();
     const [name, setName] = React.useState(group.name);
     const [description, setDescription] = React.useState(group.description);
     const [loading, setLoading] = React.useState(false);
+    const [deleting, setDeleting] = React.useState(false);
+    
+    const [coverImage, setCoverImage] = React.useState(group.coverImage);
+    const [coverImageData, setCoverImageData] = React.useState<string | null>(null);
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+    const handleCoverImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+             if (file.size > MAX_IMAGE_SIZE_MB * 1024 * 1024) {
+                toast({
+                    variant: "destructive",
+                    title: "Image Too Large",
+                    description: `Please select an image smaller than ${MAX_IMAGE_SIZE_MB}MB.`
+                });
+                return;
+            }
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setCoverImage(URL.createObjectURL(file)); // For preview
+                setCoverImageData(reader.result as string); // For upload
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
 
     const handleUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!name.trim() || !description.trim() || !idToken) return;
         setLoading(true);
 
+        const payload: any = { name, description };
+        if (coverImageData) {
+            payload.coverImage = coverImageData;
+        }
+
         try {
             const res = await fetch(`/api/groups/${group._id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
-                body: JSON.stringify({ name, description })
+                body: JSON.stringify(payload)
             });
-            if (!res.ok) throw new Error("Failed to update group");
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message || "Failed to update group");
             toast({ title: 'Success', description: 'Group details updated.' });
-            onGroupUpdated();
-        } catch (error) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Could not update group.' });
+            onGroupUpdated(data.group);
+            setCoverImageData(null);
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Error', description: error.message });
         } finally {
             setLoading(false);
         }
@@ -289,9 +336,39 @@ function SettingsTab({ group, onGroupUpdated }: { group: Group, onGroupUpdated: 
         toast({ title: 'Copied!', description: 'Invite code copied to clipboard.' });
     }
 
+    const handleDelete = async () => {
+        setDeleting(true);
+        try {
+             if (!idToken) throw new Error("Authentication required.");
+             const res = await fetch(`/api/groups/${group._id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${idToken}` }
+             });
+             const data = await res.json();
+             if (!res.ok) throw new Error(data.message || "Failed to delete group.");
+             toast({ title: "Group Deleted", description: "The group has been permanently removed." });
+             router.push('/groups');
+        } catch (error: any) {
+             toast({ variant: 'destructive', title: 'Error', description: error.message });
+        } finally {
+            setDeleting(false);
+        }
+    }
+
     return (
-        <div className="p-4">
+        <div className="p-4 space-y-8">
             <form onSubmit={handleUpdate} className="space-y-6">
+                <div className="space-y-2">
+                    <Label>Group Cover Image</Label>
+                    <div className="flex items-center gap-4">
+                        <Image src={coverImage} alt="Group cover preview" width={128} height={128} className="w-32 h-20 rounded-md object-cover border-2 border-foreground" />
+                        <input type="file" ref={fileInputRef} onChange={handleCoverImageChange} accept="image/png, image/jpeg" className="hidden"/>
+                        <NeoButton type="button" variant="secondary" onClick={() => fileInputRef.current?.click()}>
+                            <Camera className="mr-2 h-4 w-4"/>
+                            Change
+                        </NeoButton>
+                    </div>
+                </div>
                 <div className="space-y-2">
                     <Label htmlFor="name">Group Name</Label>
                     <Input id="name" value={name} onChange={e => setName(e.target.value)} className="border-2 border-foreground" />
@@ -314,6 +391,40 @@ function SettingsTab({ group, onGroupUpdated }: { group: Group, onGroupUpdated: 
                     </NeoButton>
                 </div>
             </form>
+
+            <div className="border-t-2 border-destructive pt-6">
+                <h3 className="font-headline font-bold text-lg text-destructive">Danger Zone</h3>
+                <p className="text-sm text-muted-foreground mt-1">This action cannot be undone. This will permanently delete the group, including all messages and announcements.</p>
+                <div className="mt-4">
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                         <NeoButton variant="destructive" disabled={deleting}>
+                            <Trash2 className="mr-2 h-4 w-4"/>
+                            Delete this group
+                        </NeoButton>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent className="border-2 border-foreground shadow-[4px_4px_0px_hsl(var(--foreground))]">
+                        <AlertDialogHeader>
+                          <AlertDialogTitle className="font-headline">Are you absolutely sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete the <strong>{group.name}</strong> group and all of its data.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                             onClick={handleDelete}
+                             disabled={deleting}
+                          >
+                            {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                            Yes, delete group
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                </div>
+            </div>
         </div>
     )
 }
@@ -351,6 +462,10 @@ export default function GroupPage() {
         }
     }, [authLoading, fetchGroup]);
 
+    const handleGroupUpdated = (updatedGroup: Group) => {
+        setGroup(updatedGroup);
+    };
+
     const isOwner = user && group && user.id === group.createdBy;
 
     if (loading || authLoading) {
@@ -375,7 +490,7 @@ export default function GroupPage() {
                     <Button variant="ghost" size="icon" onClick={() => router.push('/groups')}>
                         <ArrowLeft className="h-5 w-5" />
                     </Button>
-                    <Image src={group.coverImage} alt="group cover" width={40} height={40} className="rounded-md object-cover h-10 w-10 border-2 border-foreground" />
+                    <Image src={group.coverImage} alt="group cover" width={40} height={40} className="rounded-md object-cover h-10 w-10 border-2 border-foreground" data-ai-hint="group cover"/>
                     <div>
                         <h1 className="text-xl font-headline font-bold">{group.name}</h1>
                         <p className="text-xs text-muted-foreground">{group.members.length} members</p>
@@ -400,7 +515,7 @@ export default function GroupPage() {
                         </TabsContent>
                          {isOwner && (
                              <TabsContent value="settings">
-                                <SettingsTab group={group} onGroupUpdated={fetchGroup} />
+                                <SettingsTab group={group} onGroupUpdated={handleGroupUpdated} />
                             </TabsContent>
                          )}
                     </Tabs>
