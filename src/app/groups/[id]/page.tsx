@@ -179,7 +179,7 @@ function ChatTab({ groupId }: { groupId: string }) {
             setNewMessage(message.content);
         } else if (action === 'delete') {
             if (message.senderId !== user?.id) return;
-            if (!confirm("Are you sure you want to delete this message?")) return;
+            // No confirmation here, handled by AlertDialog
             try {
                 const res = await fetch(`/api/groups/${groupId}/messages/${message._id}`, {
                     method: 'DELETE', headers: { 'Authorization': `Bearer ${idToken}` }
