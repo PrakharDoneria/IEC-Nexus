@@ -1,8 +1,11 @@
 
-// This file needs to be in the public directory
-self.importScripts("https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js");
-self.importScripts("https://www.gstatic.com/firebasejs/9.22.1/firebase-messaging-compat.js");
+// This file needs to be in the public directory.
 
+// Import the Firebase app and messaging services
+import { initializeApp } from "firebase/app";
+import { getMessaging } from "firebase/messaging";
+
+// Your web app's Firebase configuration
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -12,21 +15,12 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-firebase.initializeApp(firebaseConfig);
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
 
-const messaging = firebase.messaging();
+// Initialize Firebase Cloud Messaging and get a reference to the service
+const messaging = getMessaging(app);
 
-messaging.onBackgroundMessage((payload) => {
-  console.log(
-    '[firebase-messaging-sw.js] Received background message ',
-    payload
-  );
-  // Customize notification here
-  const notificationTitle = payload.notification.title;
-  const notificationOptions = {
-    body: payload.notification.body,
-    icon: '/icon-192x192.png'
-  };
-
-  self.registration.showNotification(notificationTitle, notificationOptions);
-});
+// The service worker can be empty if you're only handling notifications
+// that are displayed automatically when the app is in the background.
+// For custom background handling, you would add listeners here.
