@@ -365,6 +365,12 @@ function SearchBar() {
       setQuery('');
     }
   }
+  
+  const handleSuggestionClick = (path: string) => {
+    router.push(path);
+    setQuery('');
+    setSuggestions([]);
+  }
 
   return (
     <form onSubmit={handleSearch} className="relative">
@@ -384,10 +390,10 @@ function SearchBar() {
             <ul>
               {suggestions.map(user => (
                 <li key={user.id}>
-                  <Link 
-                    href={`/profile/${user.id}`} 
-                    className="flex items-center gap-3 p-3 hover:bg-secondary"
-                    onClick={() => { setSuggestions([]); setQuery(''); }}
+                  <button 
+                    type="button"
+                    className="w-full text-left flex items-center gap-3 p-3 hover:bg-secondary"
+                    onClick={() => handleSuggestionClick(`/profile/${user.id}`)}
                   >
                     <Avatar className="h-8 w-8">
                        <AvatarImage src={user.avatar} />
@@ -397,7 +403,7 @@ function SearchBar() {
                       <p className="font-semibold">{user.name}</p>
                       <p className="text-xs text-muted-foreground">{user.role}</p>
                     </div>
-                  </Link>
+                  </button>
                 </li>
               ))}
             </ul>
@@ -409,26 +415,29 @@ function SearchBar() {
 
 export default function FeedPage() {
   const [posts, setPosts] = useState<Post[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { user, authLoading } = useAuth();
+  const observer = useRef<IntersectionObserver>();
   const isFetching = useRef(false);
 
-  const fetchPosts = useCallback(async (isBackground = false) => {
+  const fetchPosts = useCallback(async (pageNum: number) => {
     if (isFetching.current) return;
     isFetching.current = true;
 
-    if (!isBackground) {
-        setLoading(true);
-    }
+    setLoading(true);
     setError(null);
+
     try {
-      const response = await fetch('/api/posts');
+      const response = await fetch(`/api/posts?page=${pageNum}&limit=10`);
       if (!response.ok) {
         throw new Error('Failed to fetch posts');
       }
       const data = await response.json();
-      setPosts(data.posts);
+      setPosts(prev => pageNum === 1 ? data.posts : [...prev, ...data.posts]);
+      setHasMore(pageNum < data.totalPages);
     } catch (err) {
       setError('Could not load the feed. Please try refreshing the page.');
       console.error(err);
@@ -439,8 +448,27 @@ export default function FeedPage() {
   }, []);
 
   useEffect(() => {
-    fetchPosts();
+    fetchPosts(1);
   }, [fetchPosts]);
+
+  const lastPostElementRef = useCallback((node: HTMLDivElement) => {
+    if (loading) return;
+    if (observer.current) observer.current.disconnect();
+    
+    observer.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasMore) {
+        setPage(prevPage => prevPage + 1);
+      }
+    });
+
+    if (node) observer.current.observe(node);
+  }, [loading, hasMore]);
+  
+  useEffect(() => {
+    if (page > 1) {
+        fetchPosts(page);
+    }
+  }, [page, fetchPosts]);
 
 
   const handleAddPost = (newPost: Post) => {
@@ -481,9 +509,15 @@ export default function FeedPage() {
             <div className="flex-1 space-y-6">
                 <CreatePost onAddPost={handleAddPost} />
                 <div className="space-y-6">
-                    {loading && posts.length === 0 && <div className="text-center p-8"><Loader2 className="h-8 w-8 animate-spin mx-auto"/></div>}
+                    {posts.map((post, index) => {
+                        if (posts.length === index + 1) {
+                            return <div ref={lastPostElementRef} key={post._id?.toString()}><PostCard post={post} currentUser={user} onDelete={handleDeletePost} /></div>
+                        } else {
+                            return <PostCard key={post._id?.toString()} post={post} currentUser={user} onDelete={handleDeletePost} />
+                        }
+                    })}
+                    {loading && <div className="text-center p-8"><Loader2 className="h-8 w-8 animate-spin mx-auto"/></div>}
                     {error && <div className="text-center p-8 text-destructive">{error}</div>}
-                    {!loading && !error && posts.map(post => <PostCard key={post._id?.toString()} post={post} currentUser={user} onDelete={handleDeletePost} />)}
                 </div>
             </div>
             <RightSidebar />
