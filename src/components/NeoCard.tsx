@@ -15,13 +15,13 @@ export function NeoCard({ className, ...props }: CardProps) {
 }
 
 export function NeoCardHeader(props: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className="p-6" {...props} />;
+  return <div className="p-4" {...props} />;
 }
 
 export function NeoCardContent(props: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className="p-6 pt-0" {...props} />;
+  return <div className="p-4 pt-0" {...props} />;
 }
 
 export function NeoCardFooter(props: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className="p-6 pt-0" {...props} />;
+  return <div className="p-4 pt-0" {...props} />;
 }

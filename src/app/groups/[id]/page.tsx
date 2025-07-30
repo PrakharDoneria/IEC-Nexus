@@ -332,7 +332,7 @@ function AnnouncementsTab({ groupId }: { groupId: string }) {
                  <form onSubmit={handlePostAnnouncement}>
                     <Card>
                         <CardHeader>
-                            <h3 className="font-headline font-bold">Post an Announcement</h3>
+                            <h3 className="font-bold">Post an Announcement</h3>
                         </CardHeader>
                         <CardContent>
                             <Textarea
@@ -518,7 +518,7 @@ function SettingsTab({ group, onGroupUpdated }: { group: Group, onGroupUpdated: 
                 <div className="space-y-2">
                     <Label>Invite Code</Label>
                     <div className="flex gap-2">
-                        <Input value={group.inviteCode} readOnly className="font-code" />
+                        <Input value={group.inviteCode} readOnly className="font-mono" />
                         <Button type="button" variant="secondary" size="icon" onClick={copyInviteCode}><Copy className="h-5 w-5"/></Button>
                     </div>
                 </div>
@@ -530,8 +530,8 @@ function SettingsTab({ group, onGroupUpdated }: { group: Group, onGroupUpdated: 
                 </div>
             </form>
 
-            <div className="border-t-2 border-destructive pt-6">
-                <h3 className="font-headline font-bold text-lg text-destructive">Danger Zone</h3>
+            <div className="border-t pt-6">
+                <h3 className="font-bold text-lg text-destructive">Danger Zone</h3>
                 <p className="text-sm text-muted-foreground mt-1">This action cannot be undone. This will permanently delete the group, including all messages and announcements.</p>
                 <div className="mt-4">
                     <AlertDialog>
@@ -543,7 +543,7 @@ function SettingsTab({ group, onGroupUpdated }: { group: Group, onGroupUpdated: 
                       </AlertDialogTrigger>
                       <AlertDialogContent>
                         <AlertDialogHeader>
-                          <AlertDialogTitle className="font-headline">Are you absolutely sure?</AlertDialogTitle>
+                          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                           <AlertDialogDescription>
                             This action cannot be undone. This will permanently delete the <strong>{group.name}</strong> group and all of its data.
                           </AlertDialogDescription>
@@ -630,7 +630,7 @@ export default function GroupPage() {
                     </Button>
                     <Image src={group.coverImage} alt="group cover" width={40} height={40} className="rounded-md object-cover h-10 w-10 border"/>
                     <div>
-                        <h1 className="text-xl font-headline font-bold">{group.name}</h1>
+                        <h1 className="text-xl font-bold">{group.name}</h1>
                         <p className="text-xs text-muted-foreground">{group.members.length} members</p>
                     </div>
                 </header>

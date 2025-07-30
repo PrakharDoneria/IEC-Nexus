@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { NeoCard, NeoCardContent, NeoCardFooter, NeoCardHeader } from "@/components/NeoCard";
-import { NeoButton } from "@/components/NeoButton";
+import { Button } from "@/components/ui/button";
 import { Group } from "@/lib/types";
 import { Plus, LogIn, Loader2 } from "lucide-react";
 import {
@@ -21,7 +21,6 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Button } from "@/components/ui/button";
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
@@ -42,14 +41,14 @@ function GroupCard({ group }: { group: Group }) {
                 <Image src={group.coverImage} alt={`${group.name} cover`} width={400} height={150} className="w-full h-full object-cover" data-ai-hint="group cover"/>
             </div>
             <NeoCardHeader className="p-4">
-                <h3 className="font-headline text-xl font-bold">{group.name}</h3>
+                <h3 className="text-xl font-bold">{group.name}</h3>
                 <p className="text-sm text-muted-foreground h-10 overflow-hidden">{group.description}</p>
             </NeoCardHeader>
             <NeoCardFooter className="p-4 pt-2 flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">{group.memberCount} members</span>
-                <NeoButton size="sm" asChild>
+                <Button size="sm" asChild>
                     <Link href={`/groups/${group._id?.toString()}`}>View</Link>
-                </NeoButton>
+                </Button>
             </NeoCardFooter>
         </NeoCard>
     )
@@ -89,7 +88,7 @@ function JoinGroupDialog({ onGroupJoined, asChild }: { onGroupJoined: (groupId: 
         }
     };
     
-    const Trigger = asChild ? DropdownMenuItem : NeoButton;
+    const Trigger = asChild ? DropdownMenuItem : Button;
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
@@ -100,7 +99,7 @@ function JoinGroupDialog({ onGroupJoined, asChild }: { onGroupJoined: (groupId: 
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
-                    <DialogTitle className="font-headline">Join a Group</DialogTitle>
+                    <DialogTitle>Join a Group</DialogTitle>
                     <DialogDescription>
                         Enter the invite code to join an existing group.
                     </DialogDescription>
@@ -114,10 +113,10 @@ function JoinGroupDialog({ onGroupJoined, asChild }: { onGroupJoined: (groupId: 
                     </div>
                 </div>
                 <DialogFooter>
-                    <NeoButton type="submit" onClick={handleJoin} disabled={loading}>
+                    <Button type="submit" onClick={handleJoin} disabled={loading}>
                         {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                         Join
-                    </NeoButton>
+                    </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -160,7 +159,7 @@ function CreateGroupDialog({ onGroupCreated, asChild }: { onGroupCreated: () => 
         }
     };
     
-    const Trigger = asChild ? DropdownMenuItem : NeoButton;
+    const Trigger = asChild ? DropdownMenuItem : Button;
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
@@ -171,7 +170,7 @@ function CreateGroupDialog({ onGroupCreated, asChild }: { onGroupCreated: () => 
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
-                    <DialogTitle className="font-headline">Create a New Group</DialogTitle>
+                    <DialogTitle>Create a New Group</DialogTitle>
                     <DialogDescription>
                         Fill in the details to create your own collaboration space.
                     </DialogDescription>
@@ -187,10 +186,10 @@ function CreateGroupDialog({ onGroupCreated, asChild }: { onGroupCreated: () => 
                     </div>
                 </div>
                 <DialogFooter>
-                    <NeoButton type="submit" onClick={handleCreate} disabled={loading}>
+                    <Button type="submit" onClick={handleCreate} disabled={loading}>
                         {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                         Create
-                    </NeoButton>
+                    </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -258,7 +257,7 @@ export default function GroupsPage() {
             </div>
         </MobileNav>
         <header className="hidden md:flex h-16 items-center justify-between border-b bg-card px-4 md:px-6">
-            <h1 className="text-2xl font-headline font-bold">My Groups</h1>
+            <h1 className="text-2xl font-bold">My Groups</h1>
             <div className="flex items-center gap-2 sm:gap-4">
                 <JoinGroupDialog onGroupJoined={handleJoinSuccess} />
                 <CreateGroupDialog onGroupCreated={() => fetchGroups(true)} />
@@ -274,7 +273,7 @@ export default function GroupsPage() {
             )}
             {!loading && !error && groups.length === 0 && (
                 <div className="text-center mt-20 flex flex-col items-center">
-                    <h2 className="text-2xl font-bold font-headline">You haven't joined any groups yet.</h2>
+                    <h2 className="text-2xl font-bold">You haven't joined any groups yet.</h2>
                     <p className="text-muted-foreground mt-2 max-w-md">Join an existing group with an invite code or create a new one to start collaborating.</p>
                     <div className="flex gap-4 mt-6">
                         <JoinGroupDialog onGroupJoined={handleJoinSuccess} />

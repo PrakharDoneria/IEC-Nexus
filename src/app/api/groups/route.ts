@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
       description,
       createdBy: userId,
       members: [userId],
-      coverImage: 'https://placehold.co/400x150/A7C4D3/000000',
+      coverImage: 'https://placehold.co/400x150',
       inviteCode,
       timestamp: new Date(),
     };

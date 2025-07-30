@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ThumbsUp, MessageCircle, Link as LinkIcon, Users, BookOpen, Search, Share2, MoreVertical, Trash2, Copy, Loader2, User as UserIcon, Megaphone, Github } from 'lucide-react';
-import type { Post, User } from '@/lib/types';
+import type { Post, User, Group } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import {
   DropdownMenu,
@@ -113,7 +113,7 @@ function CreatePost({ onAddPost }: { onAddPost: (newPost: Post) => void }) {
           <div className="w-full">
             <Textarea
               placeholder={`What's on your mind, ${user?.name?.split(' ')[0]}?`}
-              className="min-h-24 mb-4 bg-secondary text-base"
+              className="min-h-24 mb-4"
               value={postContent}
               onChange={(e) => setPostContent(e.target.value)}
               disabled={loading}
@@ -131,7 +131,7 @@ function CreatePost({ onAddPost }: { onAddPost: (newPost: Post) => void }) {
                         </DialogTrigger>
                         <DialogContent>
                             <DialogHeader>
-                                <DialogTitle className="font-headline">Share GitHub Repository</DialogTitle>
+                                <DialogTitle>Share GitHub Repository</DialogTitle>
                                 <DialogDescription>Paste a link to a public GitHub repository. It will be embedded in your post using StackBlitz.</DialogDescription>
                             </DialogHeader>
                             <div className="space-y-2">
@@ -143,17 +143,17 @@ function CreatePost({ onAddPost }: { onAddPost: (newPost: Post) => void }) {
                                     onChange={(e) => setGithubLink(e.target.value)}
                                 />
                             </div>
-                            <NeoButton onClick={handlePost} disabled={loading}>
+                            <Button onClick={handlePost} disabled={loading}>
                                 {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                                 Post with Repo
-                            </NeoButton>
+                            </Button>
                         </DialogContent>
                     </Dialog>
                 </div>
-                <NeoButton onClick={handlePost} disabled={loading}>
+                <Button onClick={handlePost} disabled={loading}>
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                   Post
-                </NeoButton>
+                </Button>
             </div>
           </div>
         </div>
@@ -190,7 +190,7 @@ function ShareDialog({ post }: { post: Post }) {
       </DialogTrigger>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="font-headline">Share Post</DialogTitle>
+          <DialogTitle>Share Post</DialogTitle>
           <DialogDescription>
             Share this post with others via a link or embed it on a website.
           </DialogDescription>
@@ -200,14 +200,14 @@ function ShareDialog({ post }: { post: Post }) {
               <Label htmlFor="post-link" className="font-semibold">Post Link</Label>
               <div className="flex gap-2">
                 <Input id="post-link" value={postUrl} readOnly />
-                <NeoButton size="icon" onClick={() => copyToClipboard(postUrl, 'Link')}><Copy className="h-5 w-5"/></NeoButton>
+                <Button size="icon" onClick={() => copyToClipboard(postUrl, 'Link')}><Copy className="h-5 w-5"/></Button>
               </div>
             </div>
              <div className="space-y-2">
               <Label htmlFor="embed-code" className="font-semibold">Embed Code</Label>
                <div className="flex gap-2">
                 <Textarea id="embed-code" value={embedCode} readOnly className="font-code text-sm" rows={4}/>
-                <NeoButton size="icon" onClick={() => copyToClipboard(embedCode, 'Embed Code')}><Copy className="h-5 w-5"/></NeoButton>
+                <Button size="icon" onClick={() => copyToClipboard(embedCode, 'Embed Code')}><Copy className="h-5 w-5"/></Button>
               </div>
             </div>
         </div>
@@ -359,14 +359,56 @@ function PostCard({ post: initialPost, currentUser, onDelete }: { post: Post; cu
 }
 
 function RightSidebar() {
+    const { idToken } = useAuth();
+    const [groups, setGroups] = useState<Group[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchGroups = async () => {
+            if (!idToken) return;
+            setLoading(true);
+            try {
+                const res = await fetch('/api/groups', {
+                    headers: { Authorization: `Bearer ${idToken}` },
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    setGroups(data);
+                }
+            } catch (error) {
+                console.error("Failed to fetch groups for sidebar", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchGroups();
+    }, [idToken]);
+
     return (
         <aside className="hidden lg:block w-80 xl:w-96 space-y-6">
             <NeoCard>
                 <NeoCardHeader className="p-4">
-                    <h2 className="font-headline font-bold text-lg flex items-center gap-2"><Users className="h-5 w-5"/> My Groups</h2>
+                    <h2 className="font-bold text-lg flex items-center gap-2"><Users className="h-5 w-5"/> My Groups</h2>
                 </NeoCardHeader>
                 <NeoCardContent className="p-4 pt-0 space-y-3">
-                   <p className="text-sm text-muted-foreground">You are not part of any groups yet.</p>
+                   {loading ? (
+                       <div className="flex justify-center items-center h-20">
+                           <Loader2 className="h-6 w-6 animate-spin"/>
+                       </div>
+                   ) : groups.length === 0 ? (
+                       <p className="text-sm text-muted-foreground">You are not part of any groups yet.</p>
+                   ) : (
+                       <ul className="space-y-3">
+                           {groups.slice(0, 3).map(group => (
+                               <li key={group._id?.toString()}>
+                                   <Link href={`/groups/${group._id?.toString()}`} className="flex items-center gap-3 hover:bg-secondary p-2 rounded-md">
+                                       <Image src={group.coverImage} alt={group.name} width={32} height={32} className="w-8 h-8 object-cover rounded-md" />
+                                       <span className="font-semibold truncate">{group.name}</span>
+                                   </Link>
+                               </li>
+                           ))}
+                       </ul>
+                   )}
                 </NeoCardContent>
                 <NeoCardFooter className="p-4 pt-0">
                     <Button variant="link" className="p-0 h-auto" asChild>
@@ -377,7 +419,7 @@ function RightSidebar() {
 
              <NeoCard>
                 <NeoCardHeader className="p-4">
-                    <h2 className="font-headline font-bold text-lg flex items-center gap-2"><BookOpen className="h-5 w-5"/> Suggested Resources</h2>
+                    <h2 className="font-bold text-lg flex items-center gap-2"><BookOpen className="h-5 w-5"/> Suggested Resources</h2>
                 </NeoCardHeader>
                 <NeoCardContent className="p-4 pt-0">
                    <p className="text-sm text-muted-foreground">AI-powered resource suggestions based on recent activity will appear here.</p>
@@ -484,7 +526,7 @@ function AnnouncementCarousel({ announcements }: { announcements: any[] }) {
     return (
         <NeoCard>
             <NeoCardHeader className="p-4 pb-0">
-                 <h2 className="font-headline font-bold text-lg flex items-center gap-2"><Megaphone className="h-5 w-5"/> Recent Announcements</h2>
+                 <h2 className="font-bold text-lg flex items-center gap-2"><Megaphone className="h-5 w-5"/> Recent Announcements</h2>
             </NeoCardHeader>
             <NeoCardContent className="p-0">
                 <Carousel className="w-full" opts={{ loop: true }}>
@@ -623,7 +665,7 @@ export default function FeedPage() {
         </MobileNav>
         <header className="hidden md:flex h-16 items-center justify-between gap-4 border-b bg-card px-4 md:px-6">
             <div className="flex-1">
-                <h1 className="text-2xl font-headline font-bold">Activity Feed</h1>
+                <h1 className="text-2xl font-bold">Activity Feed</h1>
             </div>
             <div className="w-full max-w-sm">
                 <SearchBar />
