@@ -91,6 +91,8 @@ export type GroupAnnouncement = {
     content: string;
     timestamp: Date;
     author?: User; // populated
+    imageUrl?: string;
+    attachmentLink?: string;
 };
 
 

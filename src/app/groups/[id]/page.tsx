@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Group, GroupMessage, GroupAnnouncement, User, GroupMember } from '@/lib/types';
 import { useAuth } from '@/hooks/useAuth';
 import { useParams, useRouter } from 'next/navigation';
-import { Loader2, ArrowLeft, MessageSquare, Megaphone, Users, Settings, Send, Copy, Camera, Trash2, Smile, Pencil, MoreHorizontal, ThumbsUp, X, LogOut, ShieldCheck, User as UserIcon } from 'lucide-react';
+import { Loader2, ArrowLeft, MessageSquare, Megaphone, Users, Settings, Send, Copy, Camera, Trash2, Smile, Pencil, MoreHorizontal, ThumbsUp, X, LogOut, ShieldCheck, User as UserIcon, Download, Link as LinkIcon } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { formatDistanceToNow } from 'date-fns';
@@ -67,10 +67,24 @@ function GroupMessageActions({ message, onAction }: { message: GroupMessage, onA
                             <Pencil className="mr-2 h-4 w-4" />
                             <span>Edit</span>
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onAction('delete')} className="text-destructive focus:text-destructive">
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            <span>Delete</span>
-                        </DropdownMenuItem>
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    <span>Delete</span>
+                                </DropdownMenuItem>
+                             </AlertDialogTrigger>
+                             <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                    <AlertDialogDescription>This will permanently delete your message.</AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => onAction('delete')}>Delete</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
                     </>
                  )}
             </DropdownMenuContent>
@@ -179,7 +193,6 @@ function ChatTab({ groupId }: { groupId: string }) {
             setNewMessage(message.content);
         } else if (action === 'delete') {
             if (message.senderId !== user?.id) return;
-            // No confirmation here, handled by AlertDialog
             try {
                 const res = await fetch(`/api/groups/${groupId}/messages/${message._id}`, {
                     method: 'DELETE', headers: { 'Authorization': `Bearer ${idToken}` }
@@ -281,6 +294,11 @@ function AnnouncementsTab({ groupId }: { groupId: string }) {
     const { user, idToken } = useAuth();
     const [announcements, setAnnouncements] = React.useState<GroupAnnouncement[]>([]);
     const [newAnnouncement, setNewAnnouncement] = React.useState('');
+    const [attachmentLink, setAttachmentLink] = React.useState('');
+    const [imagePreview, setImagePreview] = React.useState<string | null>(null);
+    const [imageData, setImageData] = React.useState<string | null>(null);
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
+
     const [loading, setLoading] = React.useState(true);
     const [posting, setPosting] = React.useState(false);
 
@@ -305,19 +323,46 @@ function AnnouncementsTab({ groupId }: { groupId: string }) {
         fetchAnnouncements();
     }, [fetchAnnouncements]);
 
+    const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+             if (file.size > MAX_IMAGE_SIZE_MB * 1024 * 1024) {
+                toast({
+                    variant: "destructive",
+                    title: "Image Too Large",
+                    description: `Please select an image smaller than ${MAX_IMAGE_SIZE_MB}MB.`
+                });
+                return;
+            }
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setImageData(reader.result as string);
+                setImagePreview(URL.createObjectURL(file));
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
     const handlePostAnnouncement = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newAnnouncement.trim() || !idToken) return;
         setPosting(true);
         try {
+            const payload: { content: string, attachmentLink?: string, imageUrl?: string } = { content: newAnnouncement };
+            if (attachmentLink) payload.attachmentLink = attachmentLink;
+            if (imageData) payload.imageUrl = imageData;
+
             const res = await fetch(`/api/groups/${groupId}/announcements`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
-                body: JSON.stringify({ content: newAnnouncement })
+                body: JSON.stringify(payload)
             });
             if (!res.ok) throw new Error('Failed to post announcement');
             await fetchAnnouncements(); // Re-fetch all
             setNewAnnouncement('');
+            setAttachmentLink('');
+            setImageData(null);
+            setImagePreview(null);
         } catch (error) {
             toast({ variant: 'destructive', title: 'Error', description: 'Could not post announcement.' });
         } finally {
@@ -333,7 +378,7 @@ function AnnouncementsTab({ groupId }: { groupId: string }) {
                         <CardHeader>
                             <h3 className="font-bold">Post an Announcement</h3>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="space-y-4">
                             <Textarea
                                 placeholder="Type your announcement here..."
                                 className="min-h-24"
@@ -341,6 +386,28 @@ function AnnouncementsTab({ groupId }: { groupId: string }) {
                                 onChange={(e) => setNewAnnouncement(e.target.value)}
                                 disabled={posting}
                             />
+                            <div className="space-y-2">
+                                <Label htmlFor="attachment-link">Attachment Link (Optional)</Label>
+                                <Input id="attachment-link" placeholder="https://example.com/file.pdf" value={attachmentLink} onChange={(e) => setAttachmentLink(e.target.value)} disabled={posting} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Attach Image (Optional)</Label>
+                                <Input type="file" ref={fileInputRef} onChange={handleImageSelect} accept="image/png, image/jpeg" className="hidden"/>
+                                <div className="flex items-center gap-4">
+                                    <Button type="button" variant="secondary" onClick={() => fileInputRef.current?.click()} disabled={posting}>
+                                        <Camera className="mr-2 h-4 w-4"/>
+                                        Choose Image
+                                    </Button>
+                                    {imagePreview && (
+                                        <div className="relative h-16 w-16">
+                                            <Image src={imagePreview} alt="Image preview" fill className="rounded-md object-cover" />
+                                            <Button type="button" size="icon" variant="destructive" className="absolute -top-2 -right-2 h-5 w-5 rounded-full" onClick={() => { setImagePreview(null); setImageData(null); }}>
+                                                <X className="h-3 w-3" />
+                                            </Button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                         </CardContent>
                         <CardFooter className="flex justify-end">
                             <Button type="submit" disabled={posting || !newAnnouncement.trim()}>
@@ -371,9 +438,28 @@ function AnnouncementsTab({ groupId }: { groupId: string }) {
                                 </div>
                             </div>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="space-y-4">
                             <p className="whitespace-pre-wrap">{item.content}</p>
+                            {item.imageUrl && (
+                                <div className="relative aspect-video w-full rounded-md overflow-hidden border">
+                                    <Image src={item.imageUrl} alt="Announcement attachment" layout="fill" objectFit="contain" />
+                                </div>
+                            )}
                         </CardContent>
+                        {(item.imageUrl || item.attachmentLink) && (
+                            <CardFooter className="flex gap-2">
+                                {item.imageUrl && (
+                                    <Button asChild variant="secondary" size="sm">
+                                        <a href={item.imageUrl} download target="_blank"><Download className="mr-2 h-4 w-4" />Download Image</a>
+                                    </Button>
+                                )}
+                                {item.attachmentLink && (
+                                    <Button asChild variant="secondary" size="sm">
+                                        <a href={item.attachmentLink} target="_blank" rel="noopener noreferrer"><LinkIcon className="mr-2 h-4 w-4" />Open Link</a>
+                                    </Button>
+                                )}
+                            </CardFooter>
+                        )}
                     </Card>
                  ))}
             </div>

@@ -11,7 +11,7 @@ import { NeoCard, NeoCardContent, NeoCardFooter, NeoCardHeader } from '@/compone
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ThumbsUp, MessageCircle, Link as LinkIcon, Users, BookOpen, Search, Share2, MoreVertical, Trash2, Copy, Loader2, User as UserIcon, Megaphone, Github } from 'lucide-react';
+import { ThumbsUp, MessageCircle, Link as LinkIcon, Users, BookOpen, Search, Share2, MoreVertical, Trash2, Copy, Loader2, User as UserIcon, Megaphone, Github, Download } from 'lucide-react';
 import type { Post, User, Group } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import {
@@ -529,7 +529,7 @@ function AnnouncementCarousel({ announcements }: { announcements: any[] }) {
                  <h2 className="font-bold text-lg flex items-center gap-2"><Megaphone className="h-5 w-5"/> Recent Announcements</h2>
             </NeoCardHeader>
             <NeoCardContent className="p-0">
-                <Carousel className="w-full" opts={{ loop: true }}>
+                <Carousel className="w-full" opts={{ loop: announcements.length > 1 }}>
                     <CarouselContent>
                         {announcements.map((item, index) => (
                              <CarouselItem key={index}>
@@ -539,6 +539,16 @@ function AnnouncementCarousel({ announcements }: { announcements: any[] }) {
                                             From <Link href={`/groups/${item.group._id}`} className="font-bold hover:underline">{item.group.name}</Link>
                                         </p>
                                         <p className="mt-1 truncate">{item.content}</p>
+                                         {item.imageUrl && (
+                                            <div className="mt-2 relative h-40 w-full rounded-md overflow-hidden">
+                                                <Image src={item.imageUrl} alt="Announcement Image" layout="fill" objectFit="cover" />
+                                            </div>
+                                        )}
+                                        {item.attachmentLink && (
+                                            <Button asChild size="sm" className="mt-2">
+                                                <a href={item.attachmentLink} target="_blank" rel="noopener noreferrer"><LinkIcon className="mr-2 h-4 w-4" />View Attachment</a>
+                                            </Button>
+                                        )}
                                         <p className="text-xs text-muted-foreground mt-2">
                                             {formatDistanceToNow(new Date(item.timestamp), { addSuffix: true })}
                                         </p>
@@ -547,8 +557,12 @@ function AnnouncementCarousel({ announcements }: { announcements: any[] }) {
                             </CarouselItem>
                         ))}
                     </CarouselContent>
-                     <CarouselPrevious className="left-2" />
-                     <CarouselNext className="right-2" />
+                    {announcements.length > 1 && (
+                        <>
+                            <CarouselPrevious className="left-2" />
+                            <CarouselNext className="right-2" />
+                        </>
+                    )}
                 </Carousel>
             </NeoCardContent>
         </NeoCard>

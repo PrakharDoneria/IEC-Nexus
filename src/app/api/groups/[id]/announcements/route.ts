@@ -5,6 +5,7 @@ import { getAuth } from 'firebase-admin/auth';
 import admin from '@/lib/firebase-admin';
 import { ObjectId } from 'mongodb';
 import { sendNotification } from '@/services/notifications';
+import cloudinary from '@/lib/cloudinary';
 
 // Get announcements for a group
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
@@ -38,6 +39,8 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
             { $project: {
                 content: 1,
                 timestamp: 1,
+                imageUrl: 1,
+                attachmentLink: 1,
                 author: { id: '$authorInfo.id', name: '$authorInfo.name', avatar: '$authorInfo.avatar' }
             }}
         ])
@@ -47,7 +50,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
   } catch (error) {
     console.error('Error fetching announcements:', error);
-    if (error.code === 'auth/id-token-expired' || error.code === 'auth/argument-error') {
+    if (error instanceof Error && (error.name === 'auth/id-token-expired' || error.name === 'auth/argument-error')) {
        return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
     return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
@@ -73,7 +76,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         }
         const groupId = new ObjectId(params.id);
         
-        const { content } = await req.json();
+        const { content, attachmentLink, imageUrl } = await req.json();
         if (!content) {
             return NextResponse.json({ message: 'Announcement content cannot be empty' }, { status: 400 });
         }
@@ -86,10 +89,26 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
             return NextResponse.json({ message: 'Forbidden' }, { status: 403 });
         }
 
+        let finalImageUrl = null;
+        if (imageUrl && imageUrl.startsWith('data:image')) {
+             try {
+                const uploadResponse = await cloudinary.uploader.upload(imageUrl, {
+                    folder: 'iec-nexus-announcements',
+                    resource_type: 'image',
+                });
+                finalImageUrl = uploadResponse.secure_url;
+            } catch (error) {
+                console.error('Cloudinary upload failed:', error);
+                return NextResponse.json({ message: 'Image upload failed.' }, { status: 500 });
+            }
+        }
+
         const newAnnouncement = {
             groupId,
             authorId,
             content,
+            attachmentLink: attachmentLink || null,
+            imageUrl: finalImageUrl,
             timestamp: new Date(),
         };
 
@@ -109,7 +128,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     } catch (error) {
         console.error('Error creating announcement:', error);
-         if (error.code === 'auth/id-token-expired' || error.code === 'auth/argument-error') {
+         if (error instanceof Error && (error.name === 'auth/id-token-expired' || error.name === 'auth/argument-error')) {
             return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
         }
         return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });

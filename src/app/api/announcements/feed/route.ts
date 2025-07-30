@@ -43,6 +43,8 @@ export async function GET(req: NextRequest) {
             { $project: {
                 content: 1,
                 timestamp: 1,
+                imageUrl: 1,
+                attachmentLink: 1,
                 author: { name: '$authorInfo.name' },
                 group: { _id: '$groupInfo._id', name: '$groupInfo.name' }
             }}
@@ -53,7 +55,7 @@ export async function GET(req: NextRequest) {
 
   } catch (error) {
     console.error('Error fetching group announcements for feed:', error);
-    if (error.code === 'auth/id-token-expired' || error.code === 'auth/argument-error') {
+    if (error instanceof Error && (error.name === 'auth/id-token-expired' || error.name === 'auth/argument-error')) {
        return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
     return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
