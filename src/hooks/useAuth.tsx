@@ -1,7 +1,8 @@
 
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import * as React from 'react';
+import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { getAuth, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { getMessaging, getToken, onMessage } from "firebase/messaging";
 import app from '@/lib/firebase';
