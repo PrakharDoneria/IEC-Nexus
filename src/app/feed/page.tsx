@@ -687,8 +687,8 @@ export default function FeedPage() {
         </header>
         <main className="flex-1 p-4 md:p-6 lg:p-8 flex gap-8">
             <div className="flex-1 space-y-6">
+                {!loadingAnnouncements && <AnnouncementCarousel announcements={announcements} />}
                 <CreatePost onAddPost={handleAddPost} />
-                 {!loadingAnnouncements && <AnnouncementCarousel announcements={announcements} />}
                 <div className="space-y-6">
                     {posts.map((post, index) => {
                         if (posts.length === index + 1) {
@@ -707,5 +707,3 @@ export default function FeedPage() {
     </div>
   );
 }
-
-    
