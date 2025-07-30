@@ -95,6 +95,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
         const messaging = getMessaging(app);
+        // This listener handles incoming messages when the app is in the foreground
         const unsubscribe = onMessage(messaging, (payload) => {
             console.log('Message received. ', payload);
             toast({
@@ -120,6 +121,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const fetchedUser = await fetchUserProfile(token);
 
         if (fetchedUser) {
+            // Permission is now requested only after a user profile is successfully fetched.
             requestNotificationPermission(token);
              if (publicRoutes.includes(pathname)) {
                 router.push('/feed');
