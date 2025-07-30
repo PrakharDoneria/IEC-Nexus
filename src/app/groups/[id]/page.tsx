@@ -4,17 +4,16 @@ import * as React from 'react';
 import Image from 'next/image';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { MobileNav } from '@/components/layout/MobileNav';
-import { NeoCard, NeoCardContent, NeoCardHeader, NeoCardFooter } from '@/components/NeoCard';
-import { NeoButton } from '@/components/NeoButton';
+import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Group, GroupMessage, GroupAnnouncement, User } from '@/lib/types';
 import { useAuth } from '@/hooks/useAuth';
 import { useParams, useRouter } from 'next/navigation';
-import { Loader2, ArrowLeft, MessageSquare, Megaphone, Users, Settings, Send, Copy, Camera, Trash2, Smile, Pencil, MoreHorizontal, ThumbsUp } from 'lucide-react';
+import { Loader2, ArrowLeft, MessageSquare, Megaphone, Users, Settings, Send, Copy, Camera, Trash2, Smile, Pencil, MoreHorizontal, ThumbsUp, X } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { formatDistanceToNow } from 'date-fns';
 import { Label } from '@/components/ui/label';
@@ -41,6 +40,9 @@ import { cn } from '@/lib/utils';
 const MAX_IMAGE_SIZE_MB = 5;
 
 function GroupMessageActions({ message, onAction }: { message: GroupMessage, onAction: (action: 'edit' | 'delete' | 'react') => void }) {
+    const { user } = useAuth();
+    const canPerformAction = message.senderId === user?.id;
+
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -48,19 +50,23 @@ function GroupMessageActions({ message, onAction }: { message: GroupMessage, onA
                     <MoreHorizontal className="h-4 w-4" />
                 </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="border-2 border-foreground shadow-[4px_4px_0px_hsl(var(--foreground))]">
+            <DropdownMenuContent>
                 <DropdownMenuItem onClick={() => onAction('react')}>
                     <ThumbsUp className="mr-2 h-4 w-4" />
                     <span>React</span>
                 </DropdownMenuItem>
-                 <DropdownMenuItem onClick={() => onAction('edit')}>
-                    <Pencil className="mr-2 h-4 w-4" />
-                    <span>Edit</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onAction('delete')} className="text-destructive focus:text-destructive">
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    <span>Delete</span>
-                </DropdownMenuItem>
+                 {canPerformAction && (
+                    <>
+                        <DropdownMenuItem onClick={() => onAction('edit')}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            <span>Edit</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onAction('delete')} className="text-destructive focus:text-destructive">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            <span>Delete</span>
+                        </DropdownMenuItem>
+                    </>
+                 )}
             </DropdownMenuContent>
         </DropdownMenu>
     )
@@ -210,10 +216,9 @@ function ChatTab({ groupId, members }: { groupId: string, members: User[] }) {
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
                 {messages.map((msg) => {
                      const isOwnMessage = msg.senderId === user?.id;
-                     const canPerformAction = msg.senderId === user?.id;
                      return (
                          <div key={msg._id?.toString()} className={cn("flex items-end gap-2 group", isOwnMessage ? "justify-end" : "justify-start")}>
-                            {isOwnMessage && canPerformAction && <div className="opacity-0 group-hover:opacity-100 transition-opacity"><GroupMessageActions message={msg} onAction={(action) => handleMessageAction(msg, action)}/></div>}
+                            {isOwnMessage && <div className="opacity-0 group-hover:opacity-100 transition-opacity"><GroupMessageActions message={msg} onAction={(action) => handleMessageAction(msg, action)}/></div>}
                              {!isOwnMessage && (
                                 <Avatar className="h-8 w-8 self-start">
                                     <AvatarImage src={msg.sender?.avatar} />
@@ -226,13 +231,13 @@ function ChatTab({ groupId, members }: { groupId: string, members: User[] }) {
                                     <p className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(msg.timestamp), { addSuffix: true })}</p>
                                 </div>
                                 <div className={cn(
-                                    "max-w-xs md:max-w-md lg:max-w-lg p-1 rounded-xl border-2 border-foreground relative mt-1", 
+                                    "max-w-xs md:max-w-md lg:max-w-lg p-1 rounded-xl relative mt-1", 
                                     isOwnMessage ? "bg-primary text-primary-foreground rounded-br-none" : "bg-card rounded-bl-none"
                                 )}>
                                     <p className="p-2 whitespace-pre-wrap">{msg.content}</p>
                                     {msg.isEdited && <p className="text-xs px-2 pb-1 opacity-70">(edited)</p>}
                                     {(msg.reactions?.length || 0) > 0 && (
-                                        <div className="absolute -bottom-3 -right-1 bg-secondary border border-foreground rounded-full px-1.5 py-0.5 text-xs">
+                                        <div className="absolute -bottom-3 -right-1 bg-secondary border rounded-full px-1.5 py-0.5 text-xs">
                                            👍 {msg.reactions?.length}
                                         </div>
                                     )}
@@ -244,9 +249,9 @@ function ChatTab({ groupId, members }: { groupId: string, members: User[] }) {
                 })}
                 <div ref={messagesEndRef} />
             </div>
-             <div className="p-4 border-t-2 border-foreground">
+             <div className="p-4 border-t">
                 {editingMessage && (
-                    <div className="flex items-center justify-between bg-secondary p-2 rounded-md mb-2 border border-foreground">
+                    <div className="flex items-center justify-between bg-secondary p-2 rounded-md mb-2 border">
                         <div>
                             <p className="font-bold text-sm">Editing Message</p>
                             <p className="text-xs text-muted-foreground truncate">{editingMessage.content}</p>
@@ -259,14 +264,13 @@ function ChatTab({ groupId, members }: { groupId: string, members: User[] }) {
                  <form onSubmit={handleSendMessage} className="flex gap-2">
                     <Input
                         placeholder="Type a message..."
-                        className="border-2 border-foreground"
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
                         disabled={sending}
                     />
-                    <NeoButton type="submit" size="icon" disabled={sending || !newMessage.trim()}>
+                    <Button type="submit" size="icon" disabled={sending || !newMessage.trim()}>
                         {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
-                    </NeoButton>
+                    </Button>
                 </form>
             </div>
         </div>
@@ -325,26 +329,26 @@ function AnnouncementsTab({ groupId }: { groupId: string }) {
         <div className="p-4 space-y-6">
             {user?.role === 'Faculty' && (
                  <form onSubmit={handlePostAnnouncement}>
-                    <NeoCard>
-                        <NeoCardHeader>
+                    <Card>
+                        <CardHeader>
                             <h3 className="font-headline font-bold">Post an Announcement</h3>
-                        </NeoCardHeader>
-                        <NeoCardContent>
+                        </CardHeader>
+                        <CardContent>
                             <Textarea
                                 placeholder="Type your announcement here..."
-                                className="border-2 border-foreground min-h-24"
+                                className="min-h-24"
                                 value={newAnnouncement}
                                 onChange={(e) => setNewAnnouncement(e.target.value)}
                                 disabled={posting}
                             />
-                        </NeoCardContent>
-                        <NeoCardFooter className="flex justify-end">
-                            <NeoButton type="submit" disabled={posting || !newAnnouncement.trim()}>
+                        </CardContent>
+                        <CardFooter className="flex justify-end">
+                            <Button type="submit" disabled={posting || !newAnnouncement.trim()}>
                                 {posting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                                 Post
-                            </NeoButton>
-                        </NeoCardFooter>
-                    </NeoCard>
+                            </Button>
+                        </CardFooter>
+                    </Card>
                 </form>
             )}
 
@@ -354,8 +358,8 @@ function AnnouncementsTab({ groupId }: { groupId: string }) {
                      <p className="text-center text-muted-foreground pt-8">No announcements yet.</p>
                  )}
                  {!loading && announcements.map((item) => (
-                    <NeoCard key={item._id?.toString()}>
-                        <NeoCardHeader>
+                    <Card key={item._id?.toString()}>
+                        <CardHeader>
                              <div className="flex items-center gap-3">
                                 <Avatar>
                                     <AvatarImage src={item.author?.avatar} />
@@ -366,11 +370,11 @@ function AnnouncementsTab({ groupId }: { groupId: string }) {
                                     <p className="text-sm text-muted-foreground">{formatDistanceToNow(new Date(item.timestamp), { addSuffix: true })}</p>
                                 </div>
                             </div>
-                        </NeoCardHeader>
-                        <NeoCardContent>
+                        </CardHeader>
+                        <CardContent>
                             <p className="whitespace-pre-wrap">{item.content}</p>
-                        </NeoCardContent>
-                    </NeoCard>
+                        </CardContent>
+                    </Card>
                  ))}
             </div>
         </div>
@@ -381,8 +385,8 @@ function MembersTab({ members }: { members: User[] }) {
     return (
         <div className="p-4 space-y-3">
             {members.map(member => (
-                <NeoCard key={member.id}>
-                    <NeoCardContent className="p-3 flex justify-between items-center">
+                <Card key={member.id}>
+                    <CardContent className="p-3 flex justify-between items-center">
                         <div className="flex items-center gap-3">
                             <Avatar>
                                 <AvatarImage src={member.avatar} />
@@ -393,11 +397,11 @@ function MembersTab({ members }: { members: User[] }) {
                                 <p className="text-sm text-muted-foreground">{member.role}</p>
                             </div>
                         </div>
-                         <NeoButton size="sm" asChild>
+                         <Button size="sm" asChild>
                             <a href={`/profile/${member.id}`}>View</a>
-                        </NeoButton>
-                    </NeoCardContent>
-                </NeoCard>
+                        </Button>
+                    </CardContent>
+                </Card>
             ))}
         </div>
     )
@@ -502,34 +506,34 @@ function SettingsTab({ group, onGroupUpdated }: { group: Group, onGroupUpdated: 
                 <div className="space-y-2">
                     <Label>Group Cover Image</Label>
                     <div className="flex items-center gap-4">
-                        <Image src={coverImage} alt="Group cover preview" width={128} height={128} className="w-32 h-20 rounded-md object-cover border-2 border-foreground" />
+                        <Image src={coverImage} alt="Group cover preview" width={128} height={128} className="w-32 h-20 rounded-md object-cover border" />
                         <input type="file" ref={fileInputRef} onChange={handleCoverImageChange} accept="image/png, image/jpeg" className="hidden"/>
-                        <NeoButton type="button" variant="secondary" onClick={() => fileInputRef.current?.click()}>
+                        <Button type="button" variant="secondary" onClick={() => fileInputRef.current?.click()}>
                             <Camera className="mr-2 h-4 w-4"/>
                             Change
-                        </NeoButton>
+                        </Button>
                     </div>
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="name">Group Name</Label>
-                    <Input id="name" value={name} onChange={e => setName(e.target.value)} className="border-2 border-foreground" />
+                    <Input id="name" value={name} onChange={e => setName(e.target.value)} />
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="description">Group Description</Label>
-                    <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} className="border-2 border-foreground" />
+                    <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} />
                 </div>
                 <div className="space-y-2">
                     <Label>Invite Link</Label>
                     <div className="flex gap-2">
-                        <Input value={inviteLink} readOnly className="border-2 border-foreground font-code" />
-                        <NeoButton type="button" variant="secondary" size="icon" onClick={copyInviteLink}><Copy className="h-5 w-5"/></NeoButton>
+                        <Input value={inviteLink} readOnly className="font-code" />
+                        <Button type="button" variant="secondary" size="icon" onClick={copyInviteLink}><Copy className="h-5 w-5"/></Button>
                     </div>
                 </div>
                 <div className="flex justify-end">
-                    <NeoButton type="submit" disabled={loading}>
+                    <Button type="submit" disabled={loading}>
                         {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                         Save Changes
-                    </NeoButton>
+                    </Button>
                 </div>
             </form>
 
@@ -539,12 +543,12 @@ function SettingsTab({ group, onGroupUpdated }: { group: Group, onGroupUpdated: 
                 <div className="mt-4">
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                         <NeoButton variant="destructive" disabled={deleting}>
+                         <Button variant="destructive" disabled={deleting}>
                             <Trash2 className="mr-2 h-4 w-4"/>
                             Delete this group
-                        </NeoButton>
+                        </Button>
                       </AlertDialogTrigger>
-                      <AlertDialogContent className="border-2 border-foreground shadow-[4px_4px_0px_hsl(var(--foreground))]">
+                      <AlertDialogContent>
                         <AlertDialogHeader>
                           <AlertDialogTitle className="font-headline">Are you absolutely sure?</AlertDialogTitle>
                           <AlertDialogDescription>
@@ -627,11 +631,11 @@ export default function GroupPage() {
             <AppSidebar />
             <div className="flex-1 flex flex-col pb-16 md:pb-0">
                 <MobileNav />
-                <header className="flex h-16 shrink-0 items-center gap-2 border-b-2 border-foreground bg-card px-4 md:px-6">
+                <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-card px-4 md:px-6">
                     <Button variant="ghost" size="icon" onClick={() => router.push('/groups')}>
                         <ArrowLeft className="h-5 w-5" />
                     </Button>
-                    <Image src={group.coverImage} alt="group cover" width={40} height={40} className="rounded-md object-cover h-10 w-10 border-2 border-foreground" data-ai-hint="group cover"/>
+                    <Image src={group.coverImage} alt="group cover" width={40} height={40} className="rounded-md object-cover h-10 w-10 border" data-ai-hint="group cover"/>
                     <div>
                         <h1 className="text-xl font-headline font-bold">{group.name}</h1>
                         <p className="text-xs text-muted-foreground">{group.members.length} members</p>

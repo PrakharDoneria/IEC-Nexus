@@ -8,14 +8,13 @@ import { AppSidebar } from "@/components/layout/AppSidebar";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
-import { NeoButton } from "@/components/NeoButton";
+import { Button } from "@/components/ui/button";
 import { Message, User } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Loader2, Send, ArrowLeft, ImagePlus, X, ThumbsUp, Trash2, Pencil, Smile, MoreHorizontal } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
 import { useParams, useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
 import {
   DropdownMenu,
@@ -29,6 +28,9 @@ const MAX_IMAGE_SIZE_MB = 5;
 
 
 function MessageActions({ message, onAction }: { message: Message, onAction: (action: 'edit' | 'delete' | 'react') => void }) {
+    const { user } = useAuth();
+    const canPerformAction = message.senderId === user?.id;
+
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -36,19 +38,23 @@ function MessageActions({ message, onAction }: { message: Message, onAction: (ac
                     <MoreHorizontal className="h-4 w-4" />
                 </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="border-2 border-foreground shadow-[4px_4px_0px_hsl(var(--foreground))]">
+            <DropdownMenuContent>
                 <DropdownMenuItem onClick={() => onAction('react')}>
                     <ThumbsUp className="mr-2 h-4 w-4" />
                     <span>React</span>
                 </DropdownMenuItem>
-                 <DropdownMenuItem onClick={() => onAction('edit')}>
-                    <Pencil className="mr-2 h-4 w-4" />
-                    <span>Edit</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onAction('delete')} className="text-destructive focus:text-destructive">
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    <span>Delete</span>
-                </DropdownMenuItem>
+                 {canPerformAction && (
+                    <>
+                        <DropdownMenuItem onClick={() => onAction('edit')}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            <span>Edit</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onAction('delete')} className="text-destructive focus:text-destructive">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            <span>Delete</span>
+                        </DropdownMenuItem>
+                    </>
+                )}
             </DropdownMenuContent>
         </DropdownMenu>
     )
@@ -193,7 +199,7 @@ export default function ChatPage() {
     }
 
     const handleMessageAction = async (message: Message, action: 'edit' | 'delete' | 'react') => {
-        if (!idToken) return;
+        if (!idToken || !user) return;
 
         if (action === 'edit') {
             if (message.senderId !== user?.id) return;
@@ -250,7 +256,7 @@ export default function ChatPage() {
             <AppSidebar />
             <div className="flex-1 flex flex-col h-screen">
                 <MobileNav />
-                <header className="flex h-16 shrink-0 items-center border-b-2 border-foreground bg-card px-4 md:px-6">
+                <header className="flex h-16 shrink-0 items-center border-b bg-card px-4 md:px-6">
                     <Button variant="ghost" size="icon" className="md:hidden mr-2" onClick={() => router.push('/messages')}>
                         <ArrowLeft className="h-5 w-5"/>
                     </Button>
@@ -269,10 +275,9 @@ export default function ChatPage() {
                 <main className="flex-1 overflow-y-auto p-4 space-y-2 bg-secondary/50 pb-24 md:pb-4">
                     {messages.map((msg, index) => {
                         const isOwnMessage = msg.senderId === user?.id;
-                        const canPerformAction = msg.senderId === user?.id;
                         return (
                             <div key={msg._id?.toString() || index} className={cn("flex items-end gap-2 group", isOwnMessage ? "justify-end" : "justify-start")}>
-                                {isOwnMessage && canPerformAction && <div className="opacity-0 group-hover:opacity-100 transition-opacity"><MessageActions message={msg} onAction={(action) => handleMessageAction(msg, action)}/></div>}
+                                {isOwnMessage && <div className="opacity-0 group-hover:opacity-100 transition-opacity"><MessageActions message={msg} onAction={(action) => handleMessageAction(msg, action)}/></div>}
                                 {!isOwnMessage && (
                                     <Avatar className="h-8 w-8 self-start">
                                         <AvatarImage src={msg.sender?.avatar} />
@@ -280,7 +285,7 @@ export default function ChatPage() {
                                     </Avatar>
                                 )}
                                 <div className={cn(
-                                    "max-w-xs md:max-w-md lg:max-w-lg p-1 rounded-xl border-2 border-foreground relative", 
+                                    "max-w-xs md:max-w-md lg:max-w-lg p-1 rounded-xl relative", 
                                     isOwnMessage ? "bg-primary text-primary-foreground rounded-br-none" : "bg-card rounded-bl-none"
                                 )}>
                                     {msg.imageUrl && (
@@ -289,7 +294,7 @@ export default function ChatPage() {
                                     {msg.content && <p className="p-2 whitespace-pre-wrap">{msg.content}</p>}
                                     {msg.isEdited && <p className="text-xs px-2 pb-1 opacity-70">(edited)</p>}
                                     {(msg.reactions?.length || 0) > 0 && (
-                                        <div className="absolute -bottom-3 -right-1 bg-secondary border border-foreground rounded-full px-1.5 py-0.5 text-xs">
+                                        <div className="absolute -bottom-3 -right-1 bg-secondary border rounded-full px-1.5 py-0.5 text-xs">
                                            👍 {msg.reactions?.length}
                                         </div>
                                     )}
@@ -301,9 +306,9 @@ export default function ChatPage() {
                     <div ref={messagesEndRef} />
                 </main>
 
-                <footer className="p-4 border-t-2 border-foreground bg-card shrink-0 fixed bottom-16 md:relative md:bottom-0 w-full">
+                <footer className="p-4 border-t bg-card shrink-0 fixed bottom-16 md:relative md:bottom-0 w-full">
                      {editingMessage && (
-                        <div className="flex items-center justify-between bg-secondary p-2 rounded-md mb-2 border border-foreground">
+                        <div className="flex items-center justify-between bg-secondary p-2 rounded-md mb-2 border">
                             <div>
                                 <p className="font-bold text-sm">Editing Message</p>
                                 <p className="text-xs text-muted-foreground truncate">{editingMessage.content}</p>
@@ -329,19 +334,18 @@ export default function ChatPage() {
                             accept="image/png, image/jpeg"
                             className="hidden"
                         />
-                         <NeoButton type="button" variant="secondary" size="icon" onClick={() => fileInputRef.current?.click()} disabled={sending}>
+                         <Button type="button" variant="secondary" size="icon" onClick={() => fileInputRef.current?.click()} disabled={sending}>
                             <ImagePlus className="h-5 w-5"/>
-                        </NeoButton>
+                        </Button>
                         <Input 
-                            placeholder="Type a message..." 
-                            className="border-2 border-foreground"
+                            placeholder="Type a message..."
                             value={newMessage}
                             onChange={(e) => setNewMessage(e.target.value)}
                             disabled={sending}
                         />
-                        <NeoButton type="submit" size="icon" disabled={sending || (!newMessage.trim() && !imageData)}>
+                        <Button type="submit" size="icon" disabled={sending || (!newMessage.trim() && !imageData)}>
                             {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5"/>}
-                        </NeoButton>
+                        </Button>
                     </form>
                 </footer>
             </div>
