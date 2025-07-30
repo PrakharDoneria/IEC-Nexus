@@ -8,7 +8,7 @@ import { MobileNav } from "@/components/layout/MobileNav";
 import { NeoCard, NeoCardContent, NeoCardHeader } from "@/components/NeoCard";
 import { NeoButton } from "@/components/NeoButton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Mail, Briefcase, GraduationCap, UserPlus, UserCheck, ShieldBan, Loader2, Edit, MessageSquare, Award } from "lucide-react";
+import { Mail, Briefcase, GraduationCap, UserPlus, UserCheck, ShieldBan, Loader2, Edit, MessageSquare, Award, Link as LinkIcon } from "lucide-react";
 import { Post, User } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -17,13 +17,32 @@ import { formatDistanceToNow } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import Image from "next/image";
 
 function ProfilePostCard({ post }: { post: Post }) {
   return (
     <NeoCard>
       <NeoCardContent className="p-4">
         <p className="text-sm text-muted-foreground mb-2">{formatDistanceToNow(new Date(post.timestamp), { addSuffix: true })}</p>
-        <p>{post.content}</p>
+        <p className="whitespace-pre-wrap">{post.content}</p>
+        {post.resourceLink && (
+            post.resourceLink.includes('stackblitz.com') ? (
+                <div className="mt-4 w-full aspect-[4/3] border rounded-md overflow-hidden">
+                    <iframe 
+                      src={post.resourceLink} 
+                      className="w-full h-full" 
+                      title="StackBlitz Code Embed"
+                      allow="accelerometer; ambient-light-sensor; camera; encrypted-media; geolocation; gyroscope; hid; microphone; midi; payment; usb; vr; xr-spatial-tracking"
+                      sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts"
+                    ></iframe>
+                </div>
+            ) : (
+                <a href={post.resourceLink} target="_blank" rel="noopener noreferrer" className="mt-4 flex items-center gap-3 p-3 bg-secondary rounded-md border hover:bg-primary/20">
+                    <LinkIcon className="h-5 w-5 flex-shrink-0" />
+                    <span className="truncate text-sm font-medium">{post.resourceLink}</span>
+                </a>
+            )
+        )}
       </NeoCardContent>
     </NeoCard>
   )
@@ -126,9 +145,9 @@ function MessageButton({ profileUser }: { profileUser: User }) {
 
 function FollowListDialog({ userList, title }: { userList: User[], title: string }) {
     return (
-        <DialogContent className="sm:max-w-md border-2 border-foreground shadow-[4px_4px_0px_hsl(var(--foreground))]">
+        <DialogContent className="sm:max-w-md">
             <DialogHeader>
-                <DialogTitle className="font-headline">{title}</DialogTitle>
+                <DialogTitle>{title}</DialogTitle>
             </DialogHeader>
             <ScrollArea className="h-72">
                 <div className="space-y-4 pr-6">
@@ -241,7 +260,7 @@ export default function ProfilePage() {
            <div className="flex min-h-screen bg-background">
               <AppSidebar />
               <div className="flex-1 flex flex-col items-center justify-center text-center p-4">
-                 <h2 className="text-2xl font-bold font-headline">Profile Not Found</h2>
+                 <h2 className="text-2xl font-bold">Profile Not Found</h2>
                  <p className="text-destructive mt-2">{error || "The user you are looking for does not exist."}</p>
               </div>
            </div>
@@ -254,7 +273,7 @@ export default function ProfilePage() {
               <AppSidebar />
               <div className="flex-1 flex flex-col items-center justify-center text-center p-4">
                  <ShieldBan className="h-16 w-16 text-destructive mb-4" />
-                 <h2 className="text-2xl font-bold font-headline">User Banned</h2>
+                 <h2 className="text-2xl font-bold">User Banned</h2>
                  <p className="text-muted-foreground mt-2">This user's account has been suspended.</p>
               </div>
            </div>
@@ -271,17 +290,17 @@ export default function ProfilePage() {
         <MobileNav />
         <main className="flex-1">
           {/* Cover Photo */}
-          <div className="h-32 sm:h-48 bg-primary border-b-2 border-foreground relative">
-             <Avatar className="h-24 w-24 sm:h-32 sm:w-32 absolute -bottom-12 sm:-bottom-16 left-4 sm:left-8 border-4 border-foreground shadow-[4px_4px_0px_hsl(var(--foreground))]">
+          <div className="h-32 sm:h-48 bg-primary relative">
+             <Avatar className="h-24 w-24 sm:h-32 sm:w-32 absolute -bottom-12 sm:-bottom-16 left-4 sm:left-8 border-4 border-background shadow-lg">
                 <AvatarImage src={profileUser.avatar} data-ai-hint="user avatar" />
                 <AvatarFallback className="text-4xl">{profileUser.name.slice(0,2)}</AvatarFallback>
              </Avatar>
           </div>
           {/* Profile Header */}
-          <div className="bg-card border-b-2 border-foreground px-4 sm:px-8 pt-16 sm:pt-20 pb-4 sm:pb-6">
+          <div className="bg-card px-4 sm:px-8 pt-16 sm:pt-20 pb-4 sm:pb-6">
             <div className="flex flex-col sm:flex-row justify-between sm:items-start">
               <div className="flex-1">
-                  <h1 className="font-headline text-3xl sm:text-4xl font-bold">{profileUser.name}</h1>
+                  <h1 className="text-3xl sm:text-4xl font-bold">{profileUser.name}</h1>
                   <p className="text-muted-foreground text-base sm:text-lg">@{profileUser.name.toLowerCase().replace(' ', '').replace('.', '')}</p>
                    <p className="mt-2 text-base">{profileUser.bio || "At IEC"}</p>
                   <div className="flex gap-4 mt-2 text-sm">
@@ -305,9 +324,9 @@ export default function ProfilePage() {
               </div>
               <div className="flex gap-2 mt-4 sm:mt-0">
                 {isOwnProfile ? (
-                  <NeoButton asChild variant="secondary">
+                  <Button asChild variant="secondary">
                      <Link href="/settings/profile"><Edit className="mr-2 h-4 w-4"/> Edit Profile</Link>
-                  </NeoButton>
+                  </Button>
                 ) : (
                     <>
                         <FollowButton profileUser={profileUser} onFollowToggle={handleFollowToggle} />
@@ -324,11 +343,11 @@ export default function ProfilePage() {
           <div className="p-4 sm:p-8 grid md:grid-cols-3 gap-8">
             {/* Left Column (About) */}
             <div className="md:col-span-1 space-y-6">
-                <NeoCard>
-                    <NeoCardHeader className="p-4">
-                        <h2 className="font-headline font-bold text-xl">About</h2>
-                    </NeoCardHeader>
-                    <NeoCardContent className="space-y-3 p-4 pt-0">
+                <Card>
+                    <CardHeader>
+                        <h2 className="font-bold text-xl">About</h2>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
                         <div className="flex items-center gap-3">
                             <Mail className="h-5 w-5 text-muted-foreground"/>
                             <span>{profileUser.email}</span>
@@ -345,20 +364,20 @@ export default function ProfilePage() {
                             <Award className="h-5 w-5 text-muted-foreground"/>
                             <span>{profileUser.score || 0} Points</span>
                         </div>
-                    </NeoCardContent>
-                </NeoCard>
+                    </CardContent>
+                </Card>
             </div>
             {/* Right Column (Posts) */}
             <div className="md:col-span-2 space-y-6">
-                <h2 className="font-headline font-bold text-2xl">Posts</h2>
+                <h2 className="font-bold text-2xl">Posts</h2>
                  {userPosts.length > 0 ? (
                     userPosts.map(post => <ProfilePostCard key={post._id?.toString()} post={post} />)
                 ) : (
-                    <NeoCard>
-                      <NeoCardContent className="p-6 text-center text-muted-foreground">
+                    <Card>
+                      <CardContent className="p-6 text-center text-muted-foreground">
                         This user hasn't posted anything yet.
-                      </NeoCardContent>
-                    </NeoCard>
+                      </CardContent>
+                    </Card>
                 )}
             </div>
           </div>
