@@ -50,7 +50,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { messageId:
 
 
 // Delete a message
-export async function DELETE(req: NextRequest, { params }: { params: { conversationId: string, messageId: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: { messageId: string } }) {
   try {
     const idToken = req.headers.get('authorization')?.split('Bearer ')[1];
     if (!idToken) {
