@@ -25,11 +25,11 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <AuthProvider>
-          <UnreadCountProvider>
-            <RealtimeProvider>
+          <RealtimeProvider>
+            <UnreadCountProvider>
               {children}
-            </RealtimeProvider>
-          </UnreadCountProvider>
+            </UnreadCountProvider>
+          </RealtimeProvider>
         </AuthProvider>
         <Toaster />
       </body>
