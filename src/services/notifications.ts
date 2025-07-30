@@ -1,16 +1,16 @@
 
 'use server';
 
-import admin from 'firebase-admin';
+import admin from '@/lib/firebase-admin';
 import clientPromise from '@/lib/mongodb';
 import { NotificationSettings } from '@/lib/types';
 
-const messaging = admin.messaging();
 
 type NotificationCategory = keyof NotificationSettings;
 
 export async function sendNotification(userId: string, title: string, body: string, link: string, category: NotificationCategory) {
   try {
+    const messaging = admin.messaging();
     const client = await clientPromise;
     const db = client.db();
     const user = await db.collection('users').findOne({ id: userId });
