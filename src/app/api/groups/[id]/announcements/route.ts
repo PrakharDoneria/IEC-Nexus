@@ -24,7 +24,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     const client = await clientPromise;
     const db = client.db();
 
-    const group = await db.collection('groups').findOne({ _id: groupId, members: userId });
+    const group = await db.collection('groups').findOne({ _id: groupId, "members.userId": userId });
     if (!group) {
         return NextResponse.json({ message: 'Forbidden' }, { status: 403 });
     }
@@ -81,7 +81,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         const client = await clientPromise;
         const db = client.db();
 
-        const group = await db.collection('groups').findOne({ _id: groupId, members: authorId });
+        const group = await db.collection('groups').findOne({ _id: groupId, "members.userId": authorId });
         if (!group) {
             return NextResponse.json({ message: 'Forbidden' }, { status: 403 });
         }
@@ -100,7 +100,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         const notificationBody = content.substring(0, 100) + (content.length > 100 ? '...' : '');
         const notificationLink = `/groups/${group._id}`;
         
-        const membersToNotify = group.members.filter((id: string) => id !== authorId);
+        const membersToNotify = group.members.filter((m: any) => m.userId !== authorId).map((m:any) => m.userId);
         for (const memberId of membersToNotify) {
             await sendNotification(memberId, notificationTitle, notificationBody, notificationLink, 'groupAnnouncement');
         }

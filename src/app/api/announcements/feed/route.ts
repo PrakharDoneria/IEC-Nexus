@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
 
     // 1. Find all groups the user is a member of
     const userGroups = await db.collection('groups').find(
-        { members: userId },
+        { "members.userId": userId },
         { projection: { _id: 1 } }
     ).toArray();
     
@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
             { $sort: { timestamp: -1 } },
             { $limit: 5 },
             { $lookup: { from: 'users', localField: 'authorId', foreignField: 'id', as: 'authorInfo' }},
-            { $lookup: { from: 'groups', localField: 'groupId', foreignField: 'id', as: 'groupInfo' }},
+            { $lookup: { from: 'groups', localField: 'groupId', foreignField: '_id', as: 'groupInfo' }},
             { $unwind: '$authorInfo' },
             { $unwind: '$groupInfo' },
             { $project: {
