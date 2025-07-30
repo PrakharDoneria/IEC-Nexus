@@ -37,8 +37,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 
 function GroupCard({ group }: { group: Group }) {
     return (
-        <NeoCard className="overflow-hidden">
-            <div className="h-32 bg-secondary border-b-2 border-foreground">
+        <NeoCard className="overflow-hidden transition-transform hover:-translate-y-1">
+            <div className="h-32 bg-secondary border-b">
                 <Image src={group.coverImage} alt={`${group.name} cover`} width={400} height={150} className="w-full h-full object-cover" data-ai-hint="group cover"/>
             </div>
             <NeoCardHeader className="p-4">
@@ -107,7 +107,7 @@ function JoinGroupDialog({ onGroupJoined, asChild }: { onGroupJoined: (groupId: 
                     <LogIn className="mr-2 h-4 w-4" /> Join Group
                 </Trigger>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px] border-2 border-foreground shadow-[4px_4px_0px_hsl(var(--foreground))]">
+            <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
                     <DialogTitle className="font-headline">Join a Group</DialogTitle>
                     <DialogDescription>
@@ -119,7 +119,7 @@ function JoinGroupDialog({ onGroupJoined, asChild }: { onGroupJoined: (groupId: 
                         <Label htmlFor="code" className="text-right">
                             Invite Code
                         </Label>
-                        <Input id="code" value={code} onChange={(e) => setCode(e.target.value)} placeholder="abc-123" className="col-span-3 border-2 border-foreground" />
+                        <Input id="code" value={code} onChange={(e) => setCode(e.target.value)} placeholder="abc-123" className="col-span-3" />
                     </div>
                 </div>
                 <DialogFooter>
@@ -178,7 +178,7 @@ function CreateGroupDialog({ onGroupCreated, asChild }: { onGroupCreated: () => 
                     <Plus className="mr-2 h-4 w-4" /> Create Group
                 </Trigger>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px] border-2 border-foreground shadow-[4px_4px_0px_hsl(var(--foreground))]">
+            <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
                     <DialogTitle className="font-headline">Create a New Group</DialogTitle>
                     <DialogDescription>
@@ -188,11 +188,11 @@ function CreateGroupDialog({ onGroupCreated, asChild }: { onGroupCreated: () => 
                 <div className="grid gap-4 py-4">
                     <div className="space-y-2">
                         <Label htmlFor="name">Group Name</Label>
-                        <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., AI & Machine Learning Club" className="border-2 border-foreground" />
+                        <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., AI & Machine Learning Club" />
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="description">Description</Label>
-                        <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="A short description of your group" className="border-2 border-foreground" />
+                        <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="A short description of your group" />
                     </div>
                 </div>
                 <DialogFooter>
@@ -207,6 +207,7 @@ function CreateGroupDialog({ onGroupCreated, asChild }: { onGroupCreated: () => 
 }
 
 export default function GroupsPage() {
+    const { idToken } = useAuth();
     const [groups, setGroups] = useState<Group[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -214,29 +215,33 @@ export default function GroupsPage() {
     const router = useRouter();
 
     const fetchGroups = useCallback(async (isBackground = false) => {
-        if(isFetching.current) return;
+        if(isFetching.current || !idToken) return;
         isFetching.current = true;
 
         if(!isBackground) setLoading(true);
         setError(null);
 
         try {
-            const res = await fetch('/api/groups');
+            const res = await fetch('/api/groups', {
+                headers: { 'Authorization': `Bearer ${idToken}` }
+            });
             if (!res.ok) throw new Error("Failed to fetch groups");
             const data = await res.json();
             setGroups(data);
         } catch (err: any) {
             setError(err.message);
-            toast({ variant: 'destructive', title: 'Error', description: 'Could not load groups.' });
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not load your groups.' });
         } finally {
             if(!isBackground) setLoading(false);
             isFetching.current = false;
         }
-    }, []);
+    }, [idToken]);
 
     useEffect(() => {
-        fetchGroups();
-    }, [fetchGroups]);
+        if(idToken) {
+            fetchGroups();
+        }
+    }, [idToken, fetchGroups]);
     
     const handleJoinSuccess = (groupId: string) => {
         router.push(`/groups/${groupId}`);
@@ -246,7 +251,7 @@ export default function GroupsPage() {
     <div className="flex min-h-screen bg-background">
       <AppSidebar />
       <div className="flex-1 flex flex-col pb-16 md:pb-0">
-        <MobileNav pageTitle="Groups">
+        <MobileNav pageTitle="My Groups">
            <div className="md:hidden">
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -254,15 +259,15 @@ export default function GroupsPage() {
                             <MoreVertical className="h-5 w-5"/>
                         </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="border-2 border-foreground shadow-[4px_4px_0px_hsl(var(--foreground))]">
+                    <DropdownMenuContent align="end">
                         <CreateGroupDialog onGroupCreated={() => fetchGroups(true)} asChild/>
                         <JoinGroupDialog onGroupJoined={handleJoinSuccess} asChild/>
                     </DropdownMenuContent>
                 </DropdownMenu>
             </div>
         </MobileNav>
-        <header className="hidden md:flex h-16 items-center justify-between border-b-2 border-foreground bg-card px-4 md:px-6">
-            <h1 className="text-2xl font-headline font-bold">Groups</h1>
+        <header className="hidden md:flex h-16 items-center justify-between border-b bg-card px-4 md:px-6">
+            <h1 className="text-2xl font-headline font-bold">My Groups</h1>
             <div className="flex items-center gap-2 sm:gap-4">
                 <JoinGroupDialog onGroupJoined={handleJoinSuccess} />
                 <CreateGroupDialog onGroupCreated={() => fetchGroups(true)} />
@@ -277,9 +282,13 @@ export default function GroupsPage() {
                 </div>
             )}
             {!loading && !error && groups.length === 0 && (
-                <div className="text-center mt-8">
-                    <h2 className="text-xl font-semibold">No groups found.</h2>
-                    <p className="text-muted-foreground">Why not create the first one?</p>
+                <div className="text-center mt-20 flex flex-col items-center">
+                    <h2 className="text-2xl font-bold font-headline">You haven't joined any groups yet.</h2>
+                    <p className="text-muted-foreground mt-2 max-w-md">Join an existing group with an invite code or create a new one to start collaborating.</p>
+                    <div className="flex gap-4 mt-6">
+                        <JoinGroupDialog onGroupJoined={handleJoinSuccess} />
+                        <CreateGroupDialog onGroupCreated={() => fetchGroups(true)} />
+                    </div>
                 </div>
             )}
         </main>

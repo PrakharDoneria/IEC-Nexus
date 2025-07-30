@@ -88,7 +88,7 @@ function CreatePost({ onAddPost }: { onAddPost: (newPost: Post) => void }) {
           <div className="w-full">
             <Textarea
               placeholder={`What's on your mind, ${user?.name?.split(' ')[0]}?`}
-              className="min-h-24 border-2 border-foreground mb-4 bg-secondary text-base"
+              className="min-h-24 mb-4 bg-secondary text-base"
               value={postContent}
               onChange={(e) => setPostContent(e.target.value)}
               disabled={loading}
@@ -135,7 +135,7 @@ function ShareDialog({ post }: { post: Post }) {
             <Share2 className="h-5 w-5" /> <span className="hidden sm:inline">Share</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-2xl border-2 border-foreground shadow-[4px_4px_0px_hsl(var(--foreground))]">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="font-headline">Share Post</DialogTitle>
           <DialogDescription>
@@ -146,14 +146,14 @@ function ShareDialog({ post }: { post: Post }) {
             <div className="space-y-2">
               <Label htmlFor="post-link" className="font-semibold">Post Link</Label>
               <div className="flex gap-2">
-                <Input id="post-link" value={postUrl} readOnly className="border-2 border-foreground"/>
+                <Input id="post-link" value={postUrl} readOnly />
                 <NeoButton size="icon" onClick={() => copyToClipboard(postUrl, 'Link')}><Copy className="h-5 w-5"/></NeoButton>
               </div>
             </div>
              <div className="space-y-2">
               <Label htmlFor="embed-code" className="font-semibold">Embed Code</Label>
                <div className="flex gap-2">
-                <Textarea id="embed-code" value={embedCode} readOnly className="border-2 border-foreground font-code text-sm" rows={4}/>
+                <Textarea id="embed-code" value={embedCode} readOnly className="font-code text-sm" rows={4}/>
                 <NeoButton size="icon" onClick={() => copyToClipboard(embedCode, 'Embed Code')}><Copy className="h-5 w-5"/></NeoButton>
               </div>
             </div>
@@ -259,7 +259,7 @@ function PostCard({ post: initialPost, currentUser, onDelete }: { post: Post; cu
                             <MoreVertical className="h-5 w-5" />
                         </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="border-2 border-foreground shadow-[4px_4px_0px_hsl(var(--foreground))]">
+                    <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={handleDelete} className="text-destructive focus:bg-destructive/10 focus:text-destructive" disabled={isDeleting}>
                             {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Trash2 className="mr-2 h-4 w-4"/>}
                             <span>Delete Post</span>
@@ -272,7 +272,7 @@ function PostCard({ post: initialPost, currentUser, onDelete }: { post: Post; cu
       <NeoCardContent className="px-4 sm:px-6 py-4">
         <p className="whitespace-pre-wrap">{post.content}</p>
         {post.resourceLink && (
-            <a href={post.resourceLink} target="_blank" rel="noopener noreferrer" className="mt-4 flex items-center gap-3 p-3 bg-secondary rounded-md border-2 border-foreground hover:bg-primary/20">
+            <a href={post.resourceLink} target="_blank" rel="noopener noreferrer" className="mt-4 flex items-center gap-3 p-3 bg-secondary rounded-md border hover:bg-primary/20">
                 <LinkIcon className="h-5 w-5 flex-shrink-0" />
                 <span className="truncate text-sm font-medium">{post.resourceLink}</span>
             </a>
@@ -379,14 +379,14 @@ function SearchBar() {
             <Input 
               type="search" 
               placeholder="Search users..." 
-              className="pl-10 border-2 border-foreground"
+              className="pl-10"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onBlur={() => setTimeout(() => setSuggestions([]), 150)}
             />
         </div>
         {suggestions.length > 0 && (
-          <div className="absolute top-full mt-2 w-full bg-card border-2 border-foreground rounded-md shadow-lg z-20">
+          <div className="absolute top-full mt-2 w-full bg-card border rounded-md shadow-lg z-20">
             <ul>
               {suggestions.map(user => (
                 <li key={user.id}>
@@ -497,7 +497,7 @@ export default function FeedPage() {
             <SearchBar />
           </div>
         </MobileNav>
-        <header className="hidden md:flex h-16 items-center justify-between gap-4 border-b-2 border-foreground bg-card px-4 md:px-6">
+        <header className="hidden md:flex h-16 items-center justify-between gap-4 border-b bg-card px-4 md:px-6">
             <div className="flex-1">
                 <h1 className="text-2xl font-headline font-bold">Activity Feed</h1>
             </div>

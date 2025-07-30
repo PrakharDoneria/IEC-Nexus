@@ -54,7 +54,7 @@ const NavLink = ({ item, isCollapsed }: { item: typeof navItems[0], isCollapsed:
     <Link
       href={href}
       className={cn(
-        'flex items-center gap-3 rounded-md px-3 py-2 text-muted-foreground transition-colors hover:text-foreground hover:bg-secondary relative',
+        'flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-colors hover:text-foreground hover:bg-secondary relative',
         isActive && 'bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground',
         isCollapsed ? 'justify-center' : ''
       )}
@@ -100,14 +100,14 @@ export function AppSidebar() {
 
   return (
     <aside className={cn(
-      "hidden md:flex flex-col border-r-2 border-foreground bg-card transition-all duration-300 ease-in-out",
+      "hidden md:flex flex-col border-r bg-card transition-all duration-300 ease-in-out",
       isCollapsed ? "w-20" : "w-64"
     )}>
       <div className="flex-1 flex flex-col gap-y-4">
-        <header className={cn("flex h-16 items-center border-b-2 border-foreground px-4", isCollapsed && "justify-center")}>
+        <header className={cn("flex h-16 items-center border-b px-4", isCollapsed && "justify-center")}>
            <Link href="/feed" className="flex items-center gap-2 font-headline font-semibold">
-            <div className="p-2 bg-primary border-2 border-foreground rounded-md">
-              <Users className="h-6 w-6 text-primary-foreground" />
+            <div className="p-2 bg-primary text-primary-foreground rounded-lg">
+              <Users className="h-6 w-6" />
             </div>
             {!isCollapsed && <span className="">IEC Nexus</span>}
           </Link>
@@ -120,12 +120,12 @@ export function AppSidebar() {
         </nav>
       </div>
 
-      <div className="mt-auto p-4 space-y-2 border-t-2 border-foreground">
+      <div className="mt-auto p-4 space-y-2 border-t">
          <div className="px-2 space-y-1">
              <Link
                 href="/settings"
                 className={cn(
-                    'flex items-center gap-3 rounded-md px-3 py-2 text-muted-foreground transition-colors hover:text-foreground hover:bg-secondary',
+                    'flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-colors hover:text-foreground hover:bg-secondary',
                     isSettingsActive && 'bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground',
                     isCollapsed ? 'justify-center' : ''
                 )}
@@ -135,7 +135,7 @@ export function AppSidebar() {
             </Link>
         </div>
         <div className={cn("flex items-center gap-3 pt-2", isCollapsed ? "justify-center" : "")}>
-          <Avatar className="h-10 w-10 border-2 border-foreground">
+          <Avatar className="h-10 w-10">
             <AvatarImage src={user?.avatar} alt={user?.name} data-ai-hint="user avatar" />
             <AvatarFallback>{user?.name?.charAt(0)}</AvatarFallback>
           </Avatar>

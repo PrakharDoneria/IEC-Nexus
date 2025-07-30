@@ -128,7 +128,7 @@ export function CodingChallenge() {
       {!challenge && !loading && (
         <NeoCard>
             <NeoCardHeader className="text-center">
-                <Lightbulb className="mx-auto h-12 w-12 mb-4 p-2 bg-primary text-primary-foreground rounded-full border-2 border-foreground" />
+                <Lightbulb className="mx-auto h-12 w-12 mb-4 p-2 bg-primary text-primary-foreground rounded-full" />
                 <h2 className="font-headline text-3xl font-bold">
                 Daily Coding Challenge
             </h2>
@@ -160,7 +160,7 @@ export function CodingChallenge() {
       )}
 
       {error && !loading && (
-        <Alert variant="destructive" className="mt-6 border-2 border-foreground shadow-[4px_4px_0px_hsl(var(--foreground))]">
+        <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>Error</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
@@ -188,7 +188,7 @@ export function CodingChallenge() {
                     <p className="whitespace-pre-wrap">{challenge.description}</p>
                     <div className="mt-6">
                         <h3 className="font-headline font-semibold text-lg mb-2">Example</h3>
-                        <div className="bg-secondary p-4 rounded-md border-2 border-foreground font-code text-sm space-y-2">
+                        <div className="bg-secondary p-4 rounded-md font-code text-sm space-y-2">
                             <p><span className="font-bold">Input:</span> {challenge.example.input}</p>
                             <p><span className="font-bold">Output:</span> {challenge.example.output}</p>
                         </div>
@@ -204,7 +204,7 @@ export function CodingChallenge() {
                 <NeoCardContent>
                     <Textarea 
                         placeholder="Enter your solution here..."
-                        className="min-h-48 border-2 border-foreground font-code bg-secondary/50 text-base"
+                        className="min-h-48 font-code bg-secondary/50 text-base"
                         value={solution}
                         onChange={(e) => setSolution(e.target.value)}
                         disabled={validating || isTimeUp}
@@ -220,7 +220,7 @@ export function CodingChallenge() {
             </NeoCard>
 
              {validationResult && (
-                <Alert className={cn("border-2 border-foreground shadow-[4px_4px_0px_hsl(var(--foreground))]", validationResult.isCorrect ? "bg-green-100 border-green-500" : "bg-red-100 border-red-500")}>
+                <Alert className={cn(validationResult.isCorrect ? "bg-green-100 border-green-500" : "bg-red-100 border-red-500")}>
                     {validationResult.isCorrect ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
                     <AlertTitle className="font-headline font-bold text-lg">
                         {validationResult.isCorrect ? "Correct Solution!" : "Incorrect Solution"}
@@ -234,7 +234,7 @@ export function CodingChallenge() {
                 </Alert>
             )}
              {isTimeUp && !validationResult && (
-                 <Alert variant="destructive" className="border-2 border-foreground shadow-[4px_4px_0px_hsl(var(--foreground))]">
+                 <Alert variant="destructive">
                     <TimerIcon className="h-4 w-4" />
                     <AlertTitle>Time's Up!</AlertTitle>
                     <AlertDescription>The time for this challenge has expired. Please generate a new challenge to try again.</AlertDescription>
@@ -245,5 +245,3 @@ export function CodingChallenge() {
     </div>
   );
 }
-
-    

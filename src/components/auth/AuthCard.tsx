@@ -1,3 +1,4 @@
+
 import Link from 'next/link';
 import { Users } from 'lucide-react';
 import { NeoCard, NeoCardContent, NeoCardHeader } from '@/components/NeoCard';
@@ -25,8 +26,8 @@ export function AuthCard({
       <div className="w-full max-w-md">
         <div className="flex justify-center mb-6">
           <Link href="/" aria-label="Home">
-            <div className="p-3 bg-primary border-2 border-foreground rounded-full">
-              <Users className="h-10 w-10 text-primary-foreground" />
+            <div className="p-3 bg-primary text-primary-foreground rounded-full">
+              <Users className="h-10 w-10" />
             </div>
           </Link>
         </div>

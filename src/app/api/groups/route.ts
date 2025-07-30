@@ -5,14 +5,22 @@ import { getAuth } from 'firebase-admin/auth';
 import admin from '@/lib/firebase-admin';
 import { randomBytes } from 'crypto';
 
-// Get all groups
+// Get groups for the current user
 export async function GET(req: NextRequest) {
   try {
+    const idToken = req.headers.get('authorization')?.split('Bearer ')[1];
+    if (!idToken) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
+    const decodedToken = await getAuth(admin.app()).verifyIdToken(idToken);
+    const userId = decodedToken.uid;
+
     const client = await clientPromise;
     const db = client.db();
 
     const groups = await db.collection('groups')
       .aggregate([
+        { $match: { members: userId } },
         {
           $addFields: {
             memberCount: { $size: "$members" }
@@ -24,7 +32,7 @@ export async function GET(req: NextRequest) {
              description: 1,
              coverImage: 1,
              memberCount: 1,
-             inviteCode: 1, // consider hiding this for non-members
+             createdBy: 1,
           }
         }
       ])
@@ -34,6 +42,9 @@ export async function GET(req: NextRequest) {
 
   } catch (error) {
     console.error('Error fetching groups:', error);
+    if (error instanceof Error && (error.message.includes('auth/id-token-expired') || error.message.includes('auth/argument-error'))) {
+       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
     return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
   }
 }
