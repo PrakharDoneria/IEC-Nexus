@@ -159,16 +159,13 @@ function ChatTab({ groupId, currentUserRole }: { groupId: string, currentUserRol
     const [editingMessage, setEditingMessage] = React.useState<GroupMessage | null>(null);
 
     const messagesEndRef = React.useRef<HTMLDivElement>(null);
-    const isFetching = React.useRef(false);
 
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const scrollToBottom = (behavior: 'smooth' | 'auto' = 'smooth') => {
+        messagesEndRef.current?.scrollIntoView({ behavior });
     }
 
     const fetchMessages = React.useCallback(async () => {
         if (!idToken) return;
-        // Don't set isFetching here to allow real-time updates to bypass the lock
-        setLoading(true);
         try {
             const res = await fetch(`/api/groups/${groupId}/messages`, {
                 headers: { 'Authorization': `Bearer ${idToken}` }
@@ -184,28 +181,33 @@ function ChatTab({ groupId, currentUserRole }: { groupId: string, currentUserRol
     }, [groupId, idToken]);
 
     React.useEffect(() => {
-        if(!isFetching.current) {
-            isFetching.current = true;
-            fetchMessages().finally(() => { isFetching.current = false; });
-        }
+        setLoading(true);
+        fetchMessages();
     }, [fetchMessages]);
 
     // Real-time listener for new messages
     React.useEffect(() => {
-        if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
-        const messaging = getMessaging(app);
-        const unsubscribe = onMessage(messaging, (payload) => {
-            if (payload.data?.link?.includes(`/groups/${groupId}`)) {
-                fetchMessages();
-            }
-        });
+        if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return () => {};
+        
+        try {
+            const messaging = getMessaging(app);
+            const unsubscribe = onMessage(messaging, (payload) => {
+                // If we get a notification for the current group, refetch messages
+                if (payload.data?.link?.includes(`/groups/${groupId}`)) {
+                    fetchMessages();
+                }
+            });
 
-        return () => unsubscribe();
+            return () => unsubscribe();
+        } catch(e) {
+            console.error("Error setting up foreground message listener in Group Chat:", e);
+            return () => {};
+        }
     }, [groupId, fetchMessages]);
     
      React.useEffect(() => {
         if (messages.length > 0 && !loading) {
-             scrollToBottom();
+             scrollToBottom('auto');
         }
     }, [messages, loading]);
 

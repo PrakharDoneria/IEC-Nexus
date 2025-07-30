@@ -115,9 +115,10 @@ export default function ChatPage() {
     const fetchMessages = useCallback(async (cursor?: string | null) => {
         if (isFetching.current) return;
         isFetching.current = true;
+        
         if (cursor) {
             setLoadingMore(true);
-        } else {
+        } else if (!messages.length) { // only set full loading state if it's the very first fetch
             setLoading(true);
         }
         
@@ -132,7 +133,7 @@ export default function ChatPage() {
             const prevScrollHeight = chatContainerRef.current?.scrollHeight;
 
             setMessages(prev => cursor ? [...data.messages, ...prev] : data.messages);
-            setParticipant(data.participant);
+            if (!participant) setParticipant(data.participant);
             setNextCursor(data.nextCursor);
             setHasMore(!!data.nextCursor);
             
@@ -145,7 +146,6 @@ export default function ChatPage() {
                 chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight - prevScrollHeight;
             }
 
-
         } catch (error) {
             toast({ variant: 'destructive', title: 'Error', description: 'Could not load messages.'});
             if (!cursor) router.push('/messages');
@@ -154,35 +154,42 @@ export default function ChatPage() {
             setLoadingMore(false);
             isFetching.current = false;
         }
-    }, [conversationId, idToken, router, fetchUnreadCount]);
+    }, [conversationId, idToken, router, fetchUnreadCount, participant, messages.length]);
 
     useEffect(() => {
-        if (conversationId && idToken) {
+        if (conversationId && idToken && !isFetching.current) {
             fetchMessages(); 
         }
-    }, [conversationId, idToken]); // Removed fetchMessages from dep array
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [conversationId, idToken]);
 
     // Real-time listener for new messages
     useEffect(() => {
-        if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
+        if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return () => {};
         
-        const messaging = getMessaging(app);
-        const unsubscribe = onMessage(messaging, (payload) => {
-            // If we get a notification for the current conversation, refetch messages
-            if (payload.data?.link?.includes(`/messages/${conversationId}`)) {
-                fetchMessages();
-            }
-        });
+        try {
+            const messaging = getMessaging(app);
+            const unsubscribe = onMessage(messaging, (payload) => {
+                // If we get a notification for the current conversation, refetch messages
+                if (payload.data?.link?.includes(`/messages/${conversationId}`)) {
+                    fetchMessages();
+                }
+            });
 
-        return () => unsubscribe();
+            return () => unsubscribe();
+        } catch(e) {
+            console.error("Error setting up foreground message listener in Direct Message:", e);
+            return () => {};
+        }
+
     }, [conversationId, fetchMessages]);
 
     useEffect(() => {
-        if (!loading) {
-            // Scroll to bottom on initial load
+        if (!loading && !loadingMore && !hasMore) {
+            // Scroll to bottom on initial load only after the first batch is loaded
             chatContainerRef.current?.scrollTo({ top: chatContainerRef.current.scrollHeight, behavior: 'auto' });
         }
-    }, [loading]);
+    }, [loading, loadingMore, hasMore]);
 
     const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
