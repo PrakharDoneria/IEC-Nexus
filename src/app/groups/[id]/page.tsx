@@ -815,10 +815,10 @@ export default function GroupPage() {
                     </div>
                 </header>
                 <main className="flex-1 overflow-y-auto">
-                    <Tabs defaultValue="chat" className="w-full h-full flex flex-col">
+                    <Tabs defaultValue="announcements" className="w-full h-full flex flex-col">
                         <TabsList className="m-4 shrink-0">
-                            <TabsTrigger value="chat"><MessageSquare className="mr-2 h-4 w-4"/>Chat</TabsTrigger>
                             <TabsTrigger value="announcements"><Megaphone className="mr-2 h-4 w-4"/>Announcements</TabsTrigger>
+                            <TabsTrigger value="chat"><MessageSquare className="mr-2 h-4 w-4"/>Chat</TabsTrigger>
                             <TabsTrigger value="members"><Users className="mr-2 h-4 w-4"/>Members</TabsTrigger>
                             <TabsTrigger value="settings"><Settings className="mr-2 h-4 w-4"/>Settings</TabsTrigger>
                         </TabsList>
