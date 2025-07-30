@@ -37,7 +37,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
   } catch (error) {
     console.error('Error fetching group messages:', error);
-    if (error.code === 'auth/id-token-expired' || error.code === 'auth/argument-error') {
+    if (error.message.includes('auth/id-token-expired') || error.message.includes('auth/argument-error')) {
        return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
     return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
@@ -77,6 +77,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
             senderId,
             content,
             timestamp: new Date(),
+            reactions: [],
+            isEdited: false,
         };
 
         const result = await db.collection('groupMessages').insertOne(newMessage);
@@ -88,7 +90,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     } catch (error) {
         console.error('Error sending group message:', error);
-         if (error.code === 'auth/id-token-expired' || error.code === 'auth/argument-error') {
+         if (error.message.includes('auth/id-token-expired') || error.message.includes('auth/argument-error')) {
             return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
         }
         return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });

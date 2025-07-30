@@ -32,6 +32,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { MoreVertical } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 
 function GroupCard({ group }: { group: Group }) {
@@ -54,11 +55,20 @@ function GroupCard({ group }: { group: Group }) {
     )
 }
 
-function JoinGroupDialog({ onGroupJoined, asChild }: { onGroupJoined: () => void; asChild?: boolean }) {
+function JoinGroupDialog({ onGroupJoined, asChild }: { onGroupJoined: (groupId: string) => void; asChild?: boolean }) {
     const { idToken } = useAuth();
     const [loading, setLoading] = useState(false);
     const [open, setOpen] = useState(false);
     const [code, setCode] = useState("");
+    const searchParams = useSearchParams();
+
+     useEffect(() => {
+        const inviteCode = searchParams.get('code');
+        if (inviteCode) {
+            setCode(inviteCode);
+            setOpen(true);
+        }
+    }, [searchParams]);
 
     const handleJoin = async () => {
         if (!code.trim() || !idToken) return;
@@ -77,7 +87,7 @@ function JoinGroupDialog({ onGroupJoined, asChild }: { onGroupJoined: () => void
             if (!res.ok) throw new Error(data.message || 'Failed to join group');
             
             toast({ title: "Success", description: `You have joined the group!` });
-            onGroupJoined();
+            onGroupJoined(data.groupId);
             setOpen(false);
             setCode("");
 
@@ -201,6 +211,7 @@ export default function GroupsPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const isFetching = useRef(false);
+    const router = useRouter();
 
     const fetchGroups = useCallback(async (isBackground = false) => {
         if(isFetching.current) return;
@@ -226,6 +237,10 @@ export default function GroupsPage() {
     useEffect(() => {
         fetchGroups();
     }, [fetchGroups]);
+    
+    const handleJoinSuccess = (groupId: string) => {
+        router.push(`/groups/${groupId}`);
+    };
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -241,7 +256,7 @@ export default function GroupsPage() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="border-2 border-foreground shadow-[4px_4px_0px_hsl(var(--foreground))]">
                         <CreateGroupDialog onGroupCreated={() => fetchGroups(true)} asChild/>
-                        <JoinGroupDialog onGroupJoined={() => fetchGroups(true)} asChild/>
+                        <JoinGroupDialog onGroupJoined={handleJoinSuccess} asChild/>
                     </DropdownMenuContent>
                 </DropdownMenu>
             </div>
@@ -249,7 +264,7 @@ export default function GroupsPage() {
         <header className="hidden md:flex h-16 items-center justify-between border-b-2 border-foreground bg-card px-4 md:px-6">
             <h1 className="text-2xl font-headline font-bold">Groups</h1>
             <div className="flex items-center gap-2 sm:gap-4">
-                <JoinGroupDialog onGroupJoined={() => fetchGroups(true)} />
+                <JoinGroupDialog onGroupJoined={handleJoinSuccess} />
                 <CreateGroupDialog onGroupCreated={() => fetchGroups(true)} />
             </div>
         </header>

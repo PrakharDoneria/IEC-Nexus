@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -13,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Group, GroupMessage, GroupAnnouncement, User } from '@/lib/types';
 import { useAuth } from '@/hooks/useAuth';
 import { useParams, useRouter } from 'next/navigation';
-import { Loader2, ArrowLeft, MessageSquare, Megaphone, Users, Settings, Send, Copy, Camera, Trash2 } from 'lucide-react';
+import { Loader2, ArrowLeft, MessageSquare, Megaphone, Users, Settings, Send, Copy, Camera, Trash2, Smile, Pencil, MoreHorizontal, ThumbsUp } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -29,9 +28,43 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { cn } from '@/lib/utils';
+
 
 const MAX_IMAGE_SIZE_MB = 5;
+
+function GroupMessageActions({ message, onAction }: { message: GroupMessage, onAction: (action: 'edit' | 'delete' | 'react') => void }) {
+    return (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full">
+                    <MoreHorizontal className="h-4 w-4" />
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="border-2 border-foreground shadow-[4px_4px_0px_hsl(var(--foreground))]">
+                <DropdownMenuItem onClick={() => onAction('react')}>
+                    <ThumbsUp className="mr-2 h-4 w-4" />
+                    <span>React</span>
+                </DropdownMenuItem>
+                 <DropdownMenuItem onClick={() => onAction('edit')}>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    <span>Edit</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onAction('delete')} className="text-destructive focus:text-destructive">
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    <span>Delete</span>
+                </DropdownMenuItem>
+            </DropdownMenuContent>
+        </DropdownMenu>
+    )
+}
 
 function ChatTab({ groupId, members }: { groupId: string, members: User[] }) {
     const { user, idToken } = useAuth();
@@ -39,15 +72,19 @@ function ChatTab({ groupId, members }: { groupId: string, members: User[] }) {
     const [newMessage, setNewMessage] = React.useState('');
     const [loading, setLoading] = React.useState(true);
     const [sending, setSending] = React.useState(false);
+    const [editingMessage, setEditingMessage] = React.useState<GroupMessage | null>(null);
+
     const messagesEndRef = React.useRef<HTMLDivElement>(null);
     const memberMap = React.useMemo(() => new Map(members.map(m => [m.id, m])), [members]);
+    const isFetching = React.useRef(false);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
 
     const fetchMessages = React.useCallback(async (isBackground = false) => {
-        if (!idToken) return;
+        if (!idToken || isFetching.current) return;
+        isFetching.current = true;
         if(!isBackground) setLoading(true);
         try {
             const res = await fetch(`/api/groups/${groupId}/messages`, {
@@ -66,6 +103,7 @@ function ChatTab({ groupId, members }: { groupId: string, members: User[] }) {
             toast({ variant: 'destructive', title: 'Error', description: 'Could not load chat messages.' });
         } finally {
             if(!isBackground) setLoading(false);
+            isFetching.current = false;
         }
     }, [groupId, idToken, memberMap]);
 
@@ -73,14 +111,41 @@ function ChatTab({ groupId, members }: { groupId: string, members: User[] }) {
         fetchMessages();
     }, [fetchMessages]);
     
+     React.useEffect(() => {
+        if (messages.length > 0 && !loading) {
+             scrollToBottom();
+        }
+    }, [messages, loading]);
+
     React.useEffect(() => {
-        scrollToBottom();
-    }, [messages]);
+        if (!idToken || !groupId) return;
+        const intervalId = setInterval(() => fetchMessages(true), 5000); 
+        return () => clearInterval(intervalId);
+    }, [idToken, groupId, fetchMessages]);
 
     const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newMessage.trim() || !idToken) return;
         setSending(true);
+
+        if(editingMessage) {
+             try {
+                const res = await fetch(`/api/groups/${groupId}/messages/${editingMessage._id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+                    body: JSON.stringify({ content: newMessage })
+                });
+                 if (!res.ok) throw new Error("Failed to edit message");
+                 setMessages(prev => prev.map(m => m._id === editingMessage._id ? {...m, content: newMessage, isEdited: true} : m));
+            } catch (error) {
+                 toast({ variant: 'destructive', title: 'Error', description: 'Could not edit message.'});
+            } finally {
+                setEditingMessage(null);
+                setNewMessage("");
+                setSending(false);
+            }
+            return;
+        }
 
         try {
             const res = await fetch(`/api/groups/${groupId}/messages`, {
@@ -100,42 +165,110 @@ function ChatTab({ groupId, members }: { groupId: string, members: User[] }) {
         }
     }
 
+    const handleMessageAction = async (message: GroupMessage, action: 'edit' | 'delete' | 'react') => {
+        if (!idToken || !user) return;
+
+        if (action === 'edit') {
+            if (message.senderId !== user?.id) return;
+            setEditingMessage(message);
+            setNewMessage(message.content);
+        } else if (action === 'delete') {
+            if (message.senderId !== user?.id) return;
+            if (!confirm("Are you sure you want to delete this message?")) return;
+            try {
+                const res = await fetch(`/api/groups/${groupId}/messages/${message._id}`, {
+                    method: 'DELETE', headers: { 'Authorization': `Bearer ${idToken}` }
+                });
+                if (!res.ok) throw new Error("Failed to delete message");
+                setMessages(prev => prev.filter(m => m._id !== message._id));
+            } catch (error) {
+                 toast({ variant: 'destructive', title: 'Error', description: 'Could not delete message.'});
+            }
+        } else if (action === 'react') {
+            const emoji = '👍'; // Hardcoding a thumbs up for now
+             try {
+                const res = await fetch(`/api/groups/${groupId}/messages/${message._id}/react`, {
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+                    body: JSON.stringify({ emoji })
+                });
+                 if (!res.ok) throw new Error("Failed to react to message");
+                const data = await res.json();
+                 setMessages(prev => prev.map(m => m._id === message._id ? {...m, reactions: data.reactions} : m));
+            } catch (error) {
+                 toast({ variant: 'destructive', title: 'Error', description: 'Could not react to message.'});
+            }
+        }
+    }
+
     if (loading) {
         return <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin" /></div>
     }
 
     return (
         <div className="flex flex-col h-[60vh]">
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {messages.map((msg) => (
-                    <div key={msg._id?.toString()} className="flex gap-3">
-                        <Avatar>
-                            <AvatarImage src={msg.sender?.avatar} />
-                            <AvatarFallback>{msg.sender?.name.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                            <div className="flex items-baseline gap-2">
-                                <p className="font-bold">{msg.sender?.name}</p>
-                                <p className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(msg.timestamp), { addSuffix: true })}</p>
+            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                {messages.map((msg) => {
+                     const isOwnMessage = msg.senderId === user?.id;
+                     const canPerformAction = msg.senderId === user?.id;
+                     return (
+                         <div key={msg._id?.toString()} className={cn("flex items-end gap-2 group", isOwnMessage ? "justify-end" : "justify-start")}>
+                            {isOwnMessage && canPerformAction && <div className="opacity-0 group-hover:opacity-100 transition-opacity"><GroupMessageActions message={msg} onAction={(action) => handleMessageAction(msg, action)}/></div>}
+                             {!isOwnMessage && (
+                                <Avatar className="h-8 w-8 self-start">
+                                    <AvatarImage src={msg.sender?.avatar} />
+                                    <AvatarFallback>{msg.sender?.name.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                            )}
+                             <div className="flex flex-col" style={{ alignItems: isOwnMessage ? 'flex-end' : 'flex-start' }}>
+                                 <div className="flex items-baseline gap-2" style={{ flexDirection: isOwnMessage ? 'row-reverse' : 'row' }}>
+                                    <p className="font-bold text-sm">{msg.sender?.name}</p>
+                                    <p className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(msg.timestamp), { addSuffix: true })}</p>
+                                </div>
+                                <div className={cn(
+                                    "max-w-xs md:max-w-md lg:max-w-lg p-1 rounded-xl border-2 border-foreground relative mt-1", 
+                                    isOwnMessage ? "bg-primary text-primary-foreground rounded-br-none" : "bg-card rounded-bl-none"
+                                )}>
+                                    <p className="p-2 whitespace-pre-wrap">{msg.content}</p>
+                                    {msg.isEdited && <p className="text-xs px-2 pb-1 opacity-70">(edited)</p>}
+                                    {(msg.reactions?.length || 0) > 0 && (
+                                        <div className="absolute -bottom-3 -right-1 bg-secondary border border-foreground rounded-full px-1.5 py-0.5 text-xs">
+                                           👍 {msg.reactions?.length}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                            <p className="bg-secondary p-3 rounded-lg border-2 border-foreground mt-1 inline-block">{msg.content}</p>
+                            {!isOwnMessage && <div className="opacity-0 group-hover:opacity-100 transition-opacity"><GroupMessageActions message={msg} onAction={(action) => handleMessageAction(msg, action)}/></div>}
                         </div>
-                    </div>
-                ))}
+                     )
+                })}
                 <div ref={messagesEndRef} />
             </div>
-             <form onSubmit={handleSendMessage} className="p-4 border-t-2 border-foreground flex gap-2">
-                <Input
-                    placeholder="Type a message..."
-                    className="border-2 border-foreground"
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    disabled={sending}
-                />
-                <NeoButton type="submit" size="icon" disabled={sending || !newMessage.trim()}>
-                    {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
-                </NeoButton>
-            </form>
+             <div className="p-4 border-t-2 border-foreground">
+                {editingMessage && (
+                    <div className="flex items-center justify-between bg-secondary p-2 rounded-md mb-2 border border-foreground">
+                        <div>
+                            <p className="font-bold text-sm">Editing Message</p>
+                            <p className="text-xs text-muted-foreground truncate">{editingMessage.content}</p>
+                        </div>
+                        <Button size="icon" variant="ghost" onClick={() => { setEditingMessage(null); setNewMessage(""); }}>
+                            <X className="h-4 w-4"/>
+                        </Button>
+                    </div>
+                )}
+                 <form onSubmit={handleSendMessage} className="flex gap-2">
+                    <Input
+                        placeholder="Type a message..."
+                        className="border-2 border-foreground"
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        disabled={sending}
+                    />
+                    <NeoButton type="submit" size="icon" disabled={sending || !newMessage.trim()}>
+                        {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+                    </NeoButton>
+                </form>
+            </div>
         </div>
     );
 }
@@ -281,6 +414,14 @@ function SettingsTab({ group, onGroupUpdated }: { group: Group, onGroupUpdated: 
     const [coverImage, setCoverImage] = React.useState(group.coverImage);
     const [coverImageData, setCoverImageData] = React.useState<string | null>(null);
     const fileInputRef = React.useRef<HTMLInputElement>(null);
+    const [inviteLink, setInviteLink] = React.useState('');
+
+    React.useEffect(() => {
+        if (typeof window !== 'undefined') {
+            setInviteLink(`${window.location.origin}/groups/join?code=${group.inviteCode}`);
+        }
+    }, [group.inviteCode]);
+
 
     const handleCoverImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -331,9 +472,9 @@ function SettingsTab({ group, onGroupUpdated }: { group: Group, onGroupUpdated: 
         }
     }
     
-    const copyInviteCode = () => {
-        navigator.clipboard.writeText(group.inviteCode);
-        toast({ title: 'Copied!', description: 'Invite code copied to clipboard.' });
+    const copyInviteLink = () => {
+        navigator.clipboard.writeText(inviteLink);
+        toast({ title: 'Copied!', description: 'Invite link copied to clipboard.' });
     }
 
     const handleDelete = async () => {
@@ -378,10 +519,10 @@ function SettingsTab({ group, onGroupUpdated }: { group: Group, onGroupUpdated: 
                     <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} className="border-2 border-foreground" />
                 </div>
                 <div className="space-y-2">
-                    <Label>Invite Code</Label>
+                    <Label>Invite Link</Label>
                     <div className="flex gap-2">
-                        <Input value={group.inviteCode} readOnly className="border-2 border-foreground font-code" />
-                        <NeoButton type="button" variant="secondary" size="icon" onClick={copyInviteCode}><Copy className="h-5 w-5"/></NeoButton>
+                        <Input value={inviteLink} readOnly className="border-2 border-foreground font-code" />
+                        <NeoButton type="button" variant="secondary" size="icon" onClick={copyInviteLink}><Copy className="h-5 w-5"/></NeoButton>
                     </div>
                 </div>
                 <div className="flex justify-end">

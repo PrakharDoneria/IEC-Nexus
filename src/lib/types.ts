@@ -73,6 +73,8 @@ export type GroupMessage = {
     senderId: string;
     content: string;
     timestamp: Date;
+    reactions?: Reaction[];
+    isEdited?: boolean;
     sender?: User; // populated
 };
 
