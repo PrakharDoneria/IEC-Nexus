@@ -22,6 +22,7 @@ const GenerateProfileBannerOutputSchema = z.object({
 });
 export type GenerateProfileBannerOutput = z.infer<typeof GenerateProfileBannerOutputSchema>;
 
+// This tool does not actually use a real API and is for demonstration purposes only.
 const getUnsplashImage = ai.defineTool(
     {
         name: 'getUnsplashImage',
@@ -33,6 +34,7 @@ const getUnsplashImage = ai.defineTool(
         // In a real app, you would call the Unsplash API here.
         // For this demo, we'll return a placeholder that simulates a search.
         const encodedQuery = encodeURIComponent(input.query);
+        // Using a source that provides random images based on a query string
         return {
             imageUrl: `https://source.unsplash.com/1200x300/?${encodedQuery}`
         };
@@ -52,8 +54,10 @@ const generateProfileBannerFlow = ai.defineFlow(
     outputSchema: GenerateProfileBannerOutputSchema,
   },
   async (input) => {
+    // The 'runTool' function is a convenient way to execute a tool and get its direct output.
+    // It's equivalent to calling ai.generate({ tools: [getUnsplashImage], prompt: ... })
+    // and parsing the tool call from the response, but is simpler for direct tool calls.
     const { output } = await ai.runTool(getUnsplashImage, { query: input.query });
     return output!;
   }
 );
-

@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { NeoCard, NeoCardContent, NeoCardHeader, NeoCardFooter } from "@/components/NeoCard";
-import { NeoButton } from "@/components/NeoButton";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -157,19 +157,19 @@ export default function EditProfilePage() {
                         </div>
                         <div className="flex gap-2">
                             <Input 
-                                placeholder="Search for a banner..."
+                                placeholder="Search for a banner (e.g. 'abstract background')"
                                 value={bannerSearchQuery}
                                 onChange={(e) => setBannerSearchQuery(e.target.value)}
                             />
-                            <NeoButton type="button" onClick={handleBannerSearch} disabled={isSearchingBanner}>
+                            <Button type="button" onClick={handleBannerSearch} disabled={isSearchingBanner}>
                                 {isSearchingBanner ? <Loader2 className="h-4 w-4 animate-spin"/> : <Search className="h-4 w-4"/>}
-                            </NeoButton>
+                            </Button>
                         </div>
                    </div>
                   <div className="space-y-2">
                     <Label>Profile Picture</Label>
                     <div className="flex items-center gap-4">
-                      <Avatar className="h-20 w-20 border-2 border-foreground">
+                      <Avatar className="h-20 w-20">
                         <AvatarImage src={avatar} data-ai-hint="user avatar" />
                         <AvatarFallback>{name.charAt(0)}</AvatarFallback>
                       </Avatar>
@@ -180,10 +180,10 @@ export default function EditProfilePage() {
                         accept="image/png, image/jpeg"
                         className="hidden"
                       />
-                      <NeoButton type="button" variant="secondary" onClick={() => fileInputRef.current?.click()}>
+                      <Button type="button" variant="secondary" onClick={() => fileInputRef.current?.click()}>
                         <Camera className="mr-2 h-4 w-4" />
                         Change Avatar
-                      </NeoButton>
+                      </Button>
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -192,7 +192,6 @@ export default function EditProfilePage() {
                       id="name"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className="border-2 border-foreground"
                     />
                   </div>
                    <div className="space-y-2">
@@ -201,7 +200,6 @@ export default function EditProfilePage() {
                       id="bio"
                       value={bio}
                       onChange={(e) => setBio(e.target.value)}
-                      className="border-2 border-foreground"
                       placeholder="Tell us a bit about yourself"
                       maxLength={150}
                     />
@@ -213,16 +211,16 @@ export default function EditProfilePage() {
                       id="email"
                       value={user.email}
                       disabled
-                      className="border-2 border-foreground bg-muted/50"
+                      className="bg-muted/50"
                     />
                      <p className="text-xs text-muted-foreground">Your email address cannot be changed.</p>
                   </div>
                 </NeoCardContent>
-                <NeoCardFooter className="flex justify-end p-4">
-                  <NeoButton type="submit" disabled={loading}>
+                <NeoCardFooter className="flex justify-end p-4 border-t">
+                  <Button type="submit" disabled={loading}>
                     {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Save Changes
-                  </NeoButton>
+                  </Button>
                 </NeoCardFooter>
               </NeoCard>
             </form>

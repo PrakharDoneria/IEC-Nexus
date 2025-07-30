@@ -21,17 +21,19 @@ import { NeoCard, NeoCardContent, NeoCardHeader } from "@/components/NeoCard";
 function ProfilePostCard({ post }: { post: Post }) {
   return (
     <NeoCard>
-        <NeoCardHeader className="flex flex-row items-center gap-3">
-             <Avatar className="h-11 w-11">
-                <AvatarImage src={post.author.avatar} data-ai-hint="user avatar" />
-                <AvatarFallback>{post.author.name.charAt(0)}</AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="font-bold">{post.author.name}</p>
-                <p className="text-sm text-muted-foreground">{formatDistanceToNow(new Date(post.timestamp), { addSuffix: true })}</p>
+        <NeoCardHeader>
+             <div className="flex items-center gap-3">
+                 <Avatar className="h-11 w-11">
+                    <AvatarImage src={post.author.avatar} data-ai-hint="user avatar" />
+                    <AvatarFallback>{post.author.name.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-bold">{post.author.name}</p>
+                    <p className="text-sm text-muted-foreground">{formatDistanceToNow(new Date(post.timestamp), { addSuffix: true })}</p>
+                  </div>
               </div>
         </NeoCardHeader>
-      <NeoCardContent className="pt-0">
+      <NeoCardContent>
         <p className="whitespace-pre-wrap">{post.content}</p>
         {post.resourceLink && (
             post.resourceLink.includes('stackblitz.com') ? (
@@ -310,7 +312,7 @@ export default function ProfilePage() {
             <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="-mt-12 sm:-mt-16 sm:flex sm:items-end sm:space-x-5">
                     <div className="flex">
-                        <Avatar className="h-24 w-24 sm:h-32 sm:w-32 ring-4 ring-card">
+                        <Avatar className="h-24 w-24 sm:h-32 sm:w-32 ring-4 ring-card border-2 border-foreground">
                            <AvatarImage src={profileUser.avatar} data-ai-hint="user avatar" />
                            <AvatarFallback className="text-4xl">{profileUser.name.slice(0,2)}</AvatarFallback>
                         </Avatar>
