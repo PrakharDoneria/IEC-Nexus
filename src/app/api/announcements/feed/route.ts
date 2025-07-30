@@ -41,6 +41,7 @@ export async function GET(req: NextRequest) {
             { $unwind: '$authorInfo' },
             { $unwind: '$groupInfo' },
             { $project: {
+                _id: 1,
                 content: 1,
                 timestamp: 1,
                 imageUrl: 1,

@@ -49,7 +49,7 @@ export async function GET(req: NextRequest, { params }: { params: { conversation
         // When using a cursor, we are fetching messages older than the cursor's timestamp
         const cursorMessage = await db.collection('messages').findOne({ _id: new ObjectId(cursor) });
         if (cursorMessage) {
-            query.timestamp = { $lt: cursorMessage.timestamp };
+            query._id = { $lt: new ObjectId(cursor) };
         }
     }
 
@@ -69,6 +69,7 @@ export async function GET(req: NextRequest, { params }: { params: { conversation
             { $unwind: '$senderInfo' },
             {
                 $project: {
+                    _id: 1,
                     content: 1,
                     imageUrl: 1,
                     timestamp: 1,
@@ -180,6 +181,7 @@ export async function POST(req: NextRequest, { params }: { params: { conversatio
             { $unwind: '$senderInfo' },
             {
                 $project: {
+                    _id: 1,
                     content: 1,
                     imageUrl: 1,
                     timestamp: 1,

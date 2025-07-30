@@ -45,6 +45,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
             { $unwind: '$senderInfo' },
             {
                 $project: {
+                    _id: 1,
                     content: 1,
                     timestamp: 1,
                     senderId: 1,
@@ -123,6 +124,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
            { $lookup: { from: 'users', localField: 'senderId', foreignField: 'id', as: 'senderInfo' }},
            { $unwind: '$senderInfo' },
            { $project: {
+                _id: 1,
                 content: 1,
                 timestamp: 1,
                 senderId: 1,

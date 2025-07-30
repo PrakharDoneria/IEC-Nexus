@@ -10,7 +10,6 @@ type NotificationCategory = keyof NotificationSettings;
 
 export async function sendNotification(userId: string, title: string, body: string, link: string, category: NotificationCategory) {
   try {
-    const messaging = admin.messaging();
     const client = await clientPromise;
     const db = client.db();
     const user = await db.collection('users').findOne({ id: userId });
@@ -36,6 +35,11 @@ export async function sendNotification(userId: string, title: string, body: stri
         console.log(`User ${userId} has disabled notifications for ${category}.`);
         return;
     }
+    
+    if (!admin.apps.length) {
+        console.log("Firebase admin not initialized, cannot send notification.");
+        return;
+    }
 
 
     const message: admin.messaging.Message = {
@@ -52,9 +56,12 @@ export async function sendNotification(userId: string, title: string, body: stri
           icon: '/icon-192x192.png'
         }
       },
+      data: {
+        link: link
+      }
     };
 
-    const response = await messaging.send(message);
+    const response = await admin.messaging().send(message);
     console.log('Successfully sent message:', response);
   } catch (error) {
     console.error('Error sending notification:', error);

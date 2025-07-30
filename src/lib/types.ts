@@ -113,7 +113,7 @@ export type NotificationSettings = {
     groupInvite: boolean;
     directMessage: boolean;
     groupAnnouncement: boolean;
-    groupMessage: boolean; // Add this line
+    groupMessage: boolean;
 };
 
 // Schemas for Coding Challenge

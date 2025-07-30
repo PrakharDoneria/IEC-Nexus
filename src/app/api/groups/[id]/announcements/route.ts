@@ -37,6 +37,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
             { $lookup: { from: 'users', localField: 'authorId', foreignField: 'id', as: 'authorInfo' }},
             { $unwind: '$authorInfo' },
             { $project: {
+                _id: 1,
                 content: 1,
                 timestamp: 1,
                 imageUrl: 1,

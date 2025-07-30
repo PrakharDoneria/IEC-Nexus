@@ -31,6 +31,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
             { $unwind: '$authorInfo' },
             {
                 $project: {
+                    _id: 1,
                     content: 1,
                     timestamp: 1,
                     author: {
@@ -110,6 +111,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
             { $lookup: { from: 'users', localField: 'authorId', foreignField: 'id', as: 'authorInfo' } },
             { $unwind: '$authorInfo' },
             { $project: {
+                _id: 1,
                 content: 1,
                 timestamp: 1,
                 author: { id: '$authorInfo.id', name: '$authorInfo.name', avatar: '$authorInfo.avatar', role: '$authorInfo.role' }
