@@ -107,10 +107,10 @@ function ChatTab({ groupId }: { groupId: string }) {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
 
-    const fetchMessages = React.useCallback(async (isBackground = false) => {
+    const fetchMessages = React.useCallback(async () => {
         if (!idToken || isFetching.current) return;
         isFetching.current = true;
-        if(!isBackground) setLoading(true);
+        setLoading(true);
         try {
             const res = await fetch(`/api/groups/${groupId}/messages`, {
                 headers: { 'Authorization': `Bearer ${idToken}` }
@@ -121,7 +121,7 @@ function ChatTab({ groupId }: { groupId: string }) {
         } catch (error) {
             toast({ variant: 'destructive', title: 'Error', description: 'Could not load chat messages.' });
         } finally {
-            if(!isBackground) setLoading(false);
+            setLoading(false);
             isFetching.current = false;
         }
     }, [groupId, idToken]);
@@ -135,12 +135,6 @@ function ChatTab({ groupId }: { groupId: string }) {
              scrollToBottom();
         }
     }, [messages, loading]);
-
-    React.useEffect(() => {
-        if (!idToken || !groupId) return;
-        const intervalId = setInterval(() => fetchMessages(true), 5000); 
-        return () => clearInterval(intervalId);
-    }, [idToken, groupId, fetchMessages]);
 
     const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -177,6 +171,7 @@ function ChatTab({ groupId }: { groupId: string }) {
              
              setMessages(prev => [...prev, sentMessage]);
              setNewMessage('');
+             scrollToBottom();
         } catch (error) {
             toast({ variant: 'destructive', title: 'Error', description: 'Could not send message.' });
         } finally {
@@ -808,8 +803,8 @@ export default function GroupPage() {
         <div className="flex min-h-screen bg-background">
             <AppSidebar />
             <div className="flex-1 flex flex-col h-screen overflow-hidden">
-                <MobileNav />
-                <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-card px-4 md:px-6">
+                <MobileNav pageTitle={group.name} />
+                <header className="hidden md:flex h-16 shrink-0 items-center gap-2 border-b bg-card px-4 md:px-6">
                     <Button variant="ghost" size="icon" onClick={() => router.push('/groups')}>
                         <ArrowLeft className="h-5 w-5" />
                     </Button>
@@ -845,3 +840,5 @@ export default function GroupPage() {
         </div>
     )
 }
+
+    

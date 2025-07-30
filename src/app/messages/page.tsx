@@ -87,10 +87,10 @@ export default function MessagesPage() {
 
     const isFetchingConvos = useRef(false);
 
-    const fetchConversations = useCallback(async (isBackground = false) => {
+    const fetchConversations = useCallback(async () => {
         if (!idToken || isFetchingConvos.current) return;
         isFetchingConvos.current = true;
-        if(!isBackground) setLoadingConvos(true);
+        setLoadingConvos(true);
 
         try {
             const res = await fetch('/api/messages', {
@@ -102,7 +102,7 @@ export default function MessagesPage() {
         } catch (error) {
             toast({ variant: 'destructive', title: 'Error', description: 'Could not load conversations.' });
         } finally {
-            if(!isBackground) setLoadingConvos(false);
+            setLoadingConvos(false);
             isFetchingConvos.current = false;
         }
     }, [idToken]);
@@ -168,7 +168,7 @@ export default function MessagesPage() {
         <div className="flex min-h-screen bg-background">
             <AppSidebar />
             <div className="flex-1 flex flex-col pb-16 md:pb-0">
-                <MobileNav />
+                <MobileNav pageTitle="Messages" />
                  <header className="hidden md:flex h-16 items-center border-b-2 border-foreground bg-card px-4 md:px-6">
                     <h1 className="text-2xl font-headline font-bold">Messages</h1>
                 </header>
@@ -179,3 +179,5 @@ export default function MessagesPage() {
         </div>
     );
 }
+
+    

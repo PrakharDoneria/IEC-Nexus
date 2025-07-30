@@ -39,16 +39,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
     
-    console.log('Requesting notification permission...');
     const permission = await Notification.requestPermission();
     
     if (permission === 'granted') {
-      console.log('Notification permission granted.');
       try {
         const messaging = getMessaging(app);
         const fcmToken = await getToken(messaging, { vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY });
         if (fcmToken) {
-          console.log('FCM Token:', fcmToken);
           await fetch('/api/users/fcm-token', {
             method: 'POST',
             headers: {
@@ -104,7 +101,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 title: payload.notification?.title,
                 description: payload.notification?.body,
             });
-            // Ideally, you would have a global state or context to update the unread count here
+            // The useUnreadCount hook will handle polling for updates
         });
         return () => {
             unsubscribe();

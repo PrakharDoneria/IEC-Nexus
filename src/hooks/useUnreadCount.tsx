@@ -44,8 +44,9 @@ export const UnreadCountProvider: React.FC<{ children: React.ReactNode }> = ({ c
   useEffect(() => {
     if (!authLoading && idToken) {
       fetchUnreadCount(); // Initial fetch
-      const interval = setInterval(fetchUnreadCount, 30000); // Poll every 30 seconds
-      return () => clearInterval(interval);
+      // Polling is removed to reduce server load. Data will be refetched on navigation or action.
+      // const interval = setInterval(fetchUnreadCount, 30000);
+      // return () => clearInterval(interval);
     }
   }, [authLoading, idToken, fetchUnreadCount]);
   
@@ -74,3 +75,5 @@ export const useUnreadCount = () => {
   }
   return context;
 };
+
+    

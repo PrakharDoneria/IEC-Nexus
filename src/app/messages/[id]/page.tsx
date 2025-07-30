@@ -17,6 +17,17 @@ import { toast } from "@/hooks/use-toast";
 import { useParams, useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -49,10 +60,24 @@ function MessageActions({ message, onAction }: { message: Message, onAction: (ac
                             <Pencil className="mr-2 h-4 w-4" />
                             <span>Edit</span>
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onAction('delete')} className="text-destructive focus:text-destructive">
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            <span>Delete</span>
-                        </DropdownMenuItem>
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                 <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    <span>Delete</span>
+                                </DropdownMenuItem>
+                            </AlertDialogTrigger>
+                             <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                    <AlertDialogDescription>This will permanently delete your message.</AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => onAction('delete')}>Delete</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
                     </>
                 )}
             </DropdownMenuContent>
@@ -81,16 +106,14 @@ export default function ChatPage() {
     const isFetching = useRef(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const scrollToBottom = (behavior: 'smooth' | 'auto' = 'auto') => {
+        messagesEndRef.current?.scrollIntoView({ behavior });
     }
 
-    const fetchMessages = useCallback(async (isBackground = false) => {
+    const fetchMessages = useCallback(async () => {
         if (!conversationId || isFetching.current || !idToken) return;
         isFetching.current = true;
-        if (!isBackground) {
-            setLoading(true);
-        }
+        setLoading(true);
         try {
             const res = await fetch(`/api/messages/${conversationId}`, {
                 headers: { 'Authorization': `Bearer ${idToken}` }
@@ -104,9 +127,7 @@ export default function ChatPage() {
             toast({ variant: 'destructive', title: 'Error', description: 'Could not load messages.'});
             router.push('/messages');
         } finally {
-            if (!isBackground) {
-                setLoading(false);
-            }
+            setLoading(false);
             isFetching.current = false;
         }
     }, [conversationId, idToken, router, fetchUnreadCount]);
@@ -114,7 +135,7 @@ export default function ChatPage() {
 
     useEffect(() => {
         if (conversationId && idToken) {
-            fetchMessages(false); 
+            fetchMessages(); 
         }
     }, [conversationId, idToken, fetchMessages]);
 
@@ -123,12 +144,6 @@ export default function ChatPage() {
             scrollToBottom();
        }
     }, [messages.length]);
-
-    useEffect(() => {
-        if (!idToken || !conversationId) return;
-        const intervalId = setInterval(() => fetchMessages(true), 5000); 
-        return () => clearInterval(intervalId);
-    }, [idToken, conversationId, fetchMessages])
 
     const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -207,7 +222,6 @@ export default function ChatPage() {
             setNewMessage(message.content);
         } else if (action === 'delete') {
             if (message.senderId !== user?.id) return;
-            if (!confirm("Are you sure you want to delete this message?")) return;
             try {
                 const res = await fetch(`/api/messages/${conversationId}/${message._id}`, {
                     method: 'DELETE', headers: { 'Authorization': `Bearer ${idToken}` }
@@ -255,11 +269,8 @@ export default function ChatPage() {
        <div className="flex min-h-screen bg-background">
             <AppSidebar />
             <div className="flex-1 flex flex-col h-screen">
-                <MobileNav />
-                <header className="flex h-16 shrink-0 items-center border-b bg-card px-4 md:px-6">
-                    <Button variant="ghost" size="icon" className="md:hidden mr-2" onClick={() => router.push('/messages')}>
-                        <ArrowLeft className="h-5 w-5"/>
-                    </Button>
+                <MobileNav pageTitle={participant.name} />
+                <header className="hidden md:flex h-16 shrink-0 items-center border-b bg-card px-4 md:px-6">
                     <Link href={`/profile/${participant.id}`} className="flex items-center gap-3">
                         <Avatar>
                             <AvatarImage src={participant.avatar} />
@@ -352,3 +363,5 @@ export default function ChatPage() {
        </div>
     );
 }
+
+    

@@ -18,12 +18,6 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 
 
 const bottomNavItems = [
@@ -41,41 +35,23 @@ export function MobileNav({ children, pageTitle }: { children?: React.ReactNode,
 
   return (
     <>
-      <header className="md:hidden sticky top-0 flex h-16 items-center justify-between border-b-2 border-foreground bg-card px-4 z-10">
-        <Link href="/feed" className="flex items-center gap-2 font-headline font-semibold text-lg">
-           <div className="p-1.5 bg-primary border-2 border-foreground rounded-md">
-              <Users className="h-5 w-5 text-primary-foreground" />
-            </div>
-           IEC Nexus
-        </Link>
-        <div className="flex items-center gap-1">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <MoreVertical className="h-5 w-5" />
-                  <span className="sr-only">More options</span>
+      <header className="md:hidden sticky top-0 flex h-16 items-center justify-between gap-4 border-b-2 border-foreground bg-card px-4 z-10">
+        <div className="flex items-center gap-2">
+             <Link href="/feed" className="flex items-center gap-2 font-headline font-semibold text-lg">
+                <div className="p-1.5 bg-primary border-2 border-foreground rounded-md">
+                    <Users className="h-5 w-5 text-primary-foreground" />
+                </div>
+            </Link>
+            {pageTitle && <h1 className="font-headline text-xl font-bold truncate">{pageTitle}</h1>}
+        </div>
+        <div className="flex items-center">
+            {children ? children : (
+                <Button variant="ghost" size="icon" asChild>
+                    <Link href="/search"><Search className="h-5 w-5"/></Link>
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="border-2 border-foreground shadow-[4px_4px_0px_hsl(var(--foreground))]">
-                <DropdownMenuItem asChild>
-                  <Link href="/search" className="flex items-center gap-2">
-                    <Search className="h-4 w-4" />
-                    <span>Search</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/settings" className="flex items-center gap-2">
-                    <Settings className="h-4 w-4" />
-                    <span>Settings</span>
-                  </Link>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            )}
         </div>
       </header>
-       <div className="md:hidden flex h-14 items-center justify-center border-b-2 border-foreground bg-card">
-         {pageTitle && <h1 className="font-headline text-xl font-bold">{pageTitle}</h1>}
-       </div>
 
 
       {/* Bottom Navigation */}
@@ -104,3 +80,5 @@ export function MobileNav({ children, pageTitle }: { children?: React.ReactNode,
     </>
   );
 }
+
+    

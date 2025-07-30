@@ -204,11 +204,11 @@ export default function GroupsPage() {
     const isFetching = useRef(false);
     const router = useRouter();
 
-    const fetchGroups = useCallback(async (isBackground = false) => {
+    const fetchGroups = useCallback(async () => {
         if(isFetching.current || !idToken) return;
         isFetching.current = true;
 
-        if(!isBackground) setLoading(true);
+        setLoading(true);
         setError(null);
 
         try {
@@ -222,7 +222,7 @@ export default function GroupsPage() {
             setError(err.message);
             toast({ variant: 'destructive', title: 'Error', description: 'Could not load your groups.' });
         } finally {
-            if(!isBackground) setLoading(false);
+            setLoading(false);
             isFetching.current = false;
         }
     }, [idToken]);
@@ -242,25 +242,16 @@ export default function GroupsPage() {
       <AppSidebar />
       <div className="flex-1 flex flex-col pb-16 md:pb-0">
         <MobileNav pageTitle="My Groups">
-           <div className="md:hidden">
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                            <MoreVertical className="h-5 w-5"/>
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <CreateGroupDialog onGroupCreated={() => fetchGroups(true)} asChild/>
-                        <JoinGroupDialog onGroupJoined={handleJoinSuccess} asChild/>
-                    </DropdownMenuContent>
-                </DropdownMenu>
+           <div className="flex items-center gap-2">
+                <JoinGroupDialog onGroupJoined={handleJoinSuccess} />
+                <CreateGroupDialog onGroupCreated={fetchGroups} />
             </div>
         </MobileNav>
         <header className="hidden md:flex h-16 items-center justify-between border-b bg-card px-4 md:px-6">
             <h1 className="text-2xl font-bold">My Groups</h1>
             <div className="flex items-center gap-2 sm:gap-4">
                 <JoinGroupDialog onGroupJoined={handleJoinSuccess} />
-                <CreateGroupDialog onGroupCreated={() => fetchGroups(true)} />
+                <CreateGroupDialog onGroupCreated={fetchGroups} />
             </div>
         </header>
         <main className="flex-1 p-4 md:p-6 lg:p-8">
@@ -277,7 +268,7 @@ export default function GroupsPage() {
                     <p className="text-muted-foreground mt-2 max-w-md">Join an existing group with an invite code or create a new one to start collaborating.</p>
                     <div className="flex gap-4 mt-6">
                         <JoinGroupDialog onGroupJoined={handleJoinSuccess} />
-                        <CreateGroupDialog onGroupCreated={() => fetchGroups(true)} />
+                        <CreateGroupDialog onGroupCreated={fetchGroups} />
                     </div>
                 </div>
             )}
@@ -286,3 +277,5 @@ export default function GroupsPage() {
     </div>
   );
 }
+
+    
