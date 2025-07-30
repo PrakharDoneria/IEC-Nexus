@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import { useAuth } from "@/hooks/useAuth";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { MobileNav } from "@/components/layout/MobileNav";
@@ -11,10 +12,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Loader2, Camera } from "lucide-react";
+import { Loader2, Camera, Search } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { generateProfileBanner } from "@/ai/flows/generate-profile-banner";
 
-const MAX_AVATAR_SIZE_MB = 5; // Increased limit for better quality
+const MAX_AVATAR_SIZE_MB = 5; 
 
 export default function EditProfilePage() {
   const { user, idToken, authLoading, refreshUser } = useAuth();
@@ -22,6 +24,9 @@ export default function EditProfilePage() {
   const [bio, setBio] = useState("");
   const [avatar, setAvatar] = useState("");
   const [avatarData, setAvatarData] = useState<string | null>(null);
+  const [bannerImage, setBannerImage] = useState("");
+  const [bannerSearchQuery, setBannerSearchQuery] = useState("");
+  const [isSearchingBanner, setIsSearchingBanner] = useState(false);
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -30,6 +35,7 @@ export default function EditProfilePage() {
       setName(user.name);
       setBio(user.bio || "");
       setAvatar(user.avatar);
+      setBannerImage(user.bannerImage || 'https://placehold.co/1200x300.png');
     }
   }, [user]);
 
@@ -64,13 +70,26 @@ export default function EditProfilePage() {
     }
   };
 
+  const handleBannerSearch = async () => {
+    if (!bannerSearchQuery.trim()) return;
+    setIsSearchingBanner(true);
+    try {
+        const result = await generateProfileBanner({ query: bannerSearchQuery });
+        setBannerImage(result.imageUrl);
+    } catch (error) {
+        toast({ variant: "destructive", title: "Banner Search Failed", description: "Could not fetch an image. Please try another query." });
+    } finally {
+        setIsSearchingBanner(false);
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!idToken) return;
 
     setLoading(true);
     
-    const updatePayload: {name: string, bio: string, avatar?: string} = { name, bio };
+    const updatePayload: {name: string, bio: string, avatar?: string, bannerImage?: string} = { name, bio, bannerImage };
     if (avatarData) {
         updatePayload.avatar = avatarData;
     }
@@ -92,8 +111,9 @@ export default function EditProfilePage() {
 
       const updatedUser = await res.json();
       await refreshUser();
-      setAvatar(updatedUser.avatar); // Update preview with the new Cloudinary URL
-      setAvatarData(null); // Clear upload data
+      setAvatar(updatedUser.avatar); 
+      setBannerImage(updatedUser.bannerImage);
+      setAvatarData(null);
       
       toast({
         title: "Profile Updated",
@@ -130,6 +150,22 @@ export default function EditProfilePage() {
                   </p>
                 </NeoCardHeader>
                 <NeoCardContent className="space-y-6">
+                   <div className="space-y-2">
+                        <Label>Banner Image</Label>
+                        <div className="w-full aspect-[3/1] bg-secondary rounded-md overflow-hidden relative">
+                             <Image src={bannerImage} alt="Banner preview" layout="fill" objectFit="cover" />
+                        </div>
+                        <div className="flex gap-2">
+                            <Input 
+                                placeholder="Search for a banner..."
+                                value={bannerSearchQuery}
+                                onChange={(e) => setBannerSearchQuery(e.target.value)}
+                            />
+                            <NeoButton type="button" onClick={handleBannerSearch} disabled={isSearchingBanner}>
+                                {isSearchingBanner ? <Loader2 className="h-4 w-4 animate-spin"/> : <Search className="h-4 w-4"/>}
+                            </NeoButton>
+                        </div>
+                   </div>
                   <div className="space-y-2">
                     <Label>Profile Picture</Label>
                     <div className="flex items-center gap-4">

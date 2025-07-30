@@ -16,6 +16,7 @@ export type User = {
   isBanned?: boolean;
   notificationSettings?: NotificationSettings;
   score?: number;
+  bannerImage?: string;
 };
 
 export type Comment = {

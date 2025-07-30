@@ -5,7 +5,6 @@ import * as React from "react";
 import Link from "next/link";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { MobileNav } from "@/components/layout/MobileNav";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Mail, Briefcase, GraduationCap, UserPlus, UserCheck, ShieldBan, Loader2, Edit, MessageSquare, Award, Link as LinkIcon } from "lucide-react";
@@ -14,7 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useParams, useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import Image from "next/image";
 import { NeoCard, NeoCardContent, NeoCardHeader } from "@/components/NeoCard";
@@ -238,7 +237,7 @@ export default function ProfilePage() {
             if (isFollowing) {
                 // Add current user to followers list if not already present
                 if (!currentFollowers.some(u => u.id === currentUser.id)) {
-                    newFollowers = [...currentFollowers, {id: currentUser.id, name: currentUser.name, avatar: currentUser.avatar, role: currentUser.role, email: currentUser.email}];
+                    newFollowers = [...currentFollowers, {id: currentUser.id, name: currentUser.name, avatar: currentUser.avatar, role: currentUser.role, email: currentUser.email, bannerImage: currentUser.bannerImage}];
                 } else {
                     newFollowers = currentFollowers;
                 }
@@ -298,9 +297,9 @@ export default function ProfilePage() {
         <MobileNav />
         <main className="flex-1">
           <div className="w-full bg-card">
-            <div className="h-32 sm:h-48 bg-primary relative">
+            <div className="h-32 sm:h-48 bg-secondary relative">
                 <Image
-                    src="https://placehold.co/1200x300.png"
+                    src={profileUser.bannerImage || 'https://placehold.co/1200x300.png'}
                     alt="Cover image"
                     width={1200}
                     height={300}
@@ -311,7 +310,7 @@ export default function ProfilePage() {
             <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="-mt-12 sm:-mt-16 sm:flex sm:items-end sm:space-x-5">
                     <div className="flex">
-                        <Avatar className="h-24 w-24 sm:h-32 sm:w-32 ring-4 ring-background">
+                        <Avatar className="h-24 w-24 sm:h-32 sm:w-32 ring-4 ring-card">
                            <AvatarImage src={profileUser.avatar} data-ai-hint="user avatar" />
                            <AvatarFallback className="text-4xl">{profileUser.name.slice(0,2)}</AvatarFallback>
                         </Avatar>
@@ -409,5 +408,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
-    

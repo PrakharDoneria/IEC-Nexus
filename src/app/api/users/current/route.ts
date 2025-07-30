@@ -49,12 +49,13 @@ export async function PATCH(req: NextRequest) {
     const decodedToken = await getAuth(admin.app()).verifyIdToken(idToken);
     const uid = decodedToken.uid;
 
-    const { name, bio, avatar, notificationSettings } = await req.json();
+    const { name, bio, avatar, notificationSettings, bannerImage } = await req.json();
 
     const updateData: { [key: string]: any } = {};
     if (name) updateData.name = name;
     if (bio) updateData.bio = bio;
     if (notificationSettings) updateData.notificationSettings = notificationSettings;
+    if (bannerImage) updateData.bannerImage = bannerImage;
 
     if (avatar && avatar.startsWith('data:image')) {
         try {

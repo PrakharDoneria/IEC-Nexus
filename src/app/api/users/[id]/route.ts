@@ -35,6 +35,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     const userWithScore = {
         ...user,
         score: user.score || 0,
+        bannerImage: user.bannerImage || 'https://placehold.co/1200x300.png'
     };
 
     const { _id, ...userWithoutMongoId } = userWithScore;
