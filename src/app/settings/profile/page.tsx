@@ -14,13 +14,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Loader2, Camera } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
-const MAX_AVATAR_SIZE_MB = 2;
+const MAX_AVATAR_SIZE_MB = 5; // Increased limit for better quality
 
 export default function EditProfilePage() {
   const { user, idToken, authLoading, refreshUser } = useAuth();
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
   const [avatar, setAvatar] = useState("");
+  const [avatarData, setAvatarData] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -56,7 +57,8 @@ export default function EditProfilePage() {
       }
       const reader = new FileReader();
       reader.onloadend = () => {
-        setAvatar(reader.result as string);
+        setAvatar(URL.createObjectURL(file)); // For preview
+        setAvatarData(reader.result as string); // For upload
       };
       reader.readAsDataURL(file);
     }
@@ -64,9 +66,14 @@ export default function EditProfilePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !idToken) return;
+    if (!idToken) return;
 
     setLoading(true);
+    
+    const updatePayload: {name: string, bio: string, avatar?: string} = { name, bio };
+    if (avatarData) {
+        updatePayload.avatar = avatarData;
+    }
     
     try {
        const res = await fetch(`/api/users/current`, {
@@ -75,7 +82,7 @@ export default function EditProfilePage() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${idToken}`
         },
-        body: JSON.stringify({ name, bio, avatar })
+        body: JSON.stringify(updatePayload)
       });
       
       if (!res.ok) {
@@ -83,7 +90,11 @@ export default function EditProfilePage() {
         throw new Error(errorData.message || 'Failed to update profile');
       }
 
+      const updatedUser = await res.json();
       await refreshUser();
+      setAvatar(updatedUser.avatar); // Update preview with the new Cloudinary URL
+      setAvatarData(null); // Clear upload data
+      
       toast({
         title: "Profile Updated",
         description: "Your changes have been saved successfully."

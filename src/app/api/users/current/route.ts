@@ -4,6 +4,7 @@ import { getAuth } from 'firebase-admin/auth';
 import admin from '@/lib/firebase-admin';
 import clientPromise from '@/lib/mongodb';
 import { NotificationSettings } from '@/lib/types';
+import cloudinary from '@/lib/cloudinary';
 
 export async function GET(req: NextRequest) {
   try {
@@ -53,8 +54,23 @@ export async function PATCH(req: NextRequest) {
     const updateData: { [key: string]: any } = {};
     if (name) updateData.name = name;
     if (bio) updateData.bio = bio;
-    if (avatar) updateData.avatar = avatar;
     if (notificationSettings) updateData.notificationSettings = notificationSettings;
+
+    if (avatar && avatar.startsWith('data:image')) {
+        try {
+            const uploadResponse = await cloudinary.uploader.upload(avatar, {
+                folder: 'iec-nexus-avatars',
+                resource_type: 'image',
+            });
+            updateData.avatar = uploadResponse.secure_url;
+        } catch (error) {
+            console.error('Cloudinary upload failed:', error);
+            return NextResponse.json({ message: 'Image upload failed.' }, { status: 500 });
+        }
+    } else if (avatar) {
+        // It's not a new upload, so just keep the existing URL
+        updateData.avatar = avatar;
+    }
 
 
     if (Object.keys(updateData).length === 0) {

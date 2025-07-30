@@ -5,6 +5,7 @@ import { getAuth } from 'firebase-admin/auth';
 import admin from '@/lib/firebase-admin';
 import { ObjectId } from 'mongodb';
 import { sendNotification } from '@/services/notifications';
+import cloudinary from '@/lib/cloudinary';
 
 // Get messages for a conversation and mark as read
 export async function GET(req: NextRequest, { params }: { params: { conversationId: string } }) {
@@ -112,11 +113,26 @@ export async function POST(req: NextRequest, { params }: { params: { conversatio
             return NextResponse.json({ message: 'Forbidden' }, { status: 403 });
         }
 
+        let finalImageUrl = null;
+        if (imageUrl && imageUrl.startsWith('data:image')) {
+             try {
+                const uploadResponse = await cloudinary.uploader.upload(imageUrl, {
+                    folder: 'iec-nexus-messages',
+                    resource_type: 'image',
+                });
+                finalImageUrl = uploadResponse.secure_url;
+            } catch (error) {
+                console.error('Cloudinary upload failed:', error);
+                return NextResponse.json({ message: 'Image upload failed.' }, { status: 500 });
+            }
+        }
+
+
         const newMessage = {
             conversationId,
             senderId,
             content: content || "",
-            imageUrl: imageUrl || null,
+            imageUrl: finalImageUrl,
             timestamp: new Date(),
             readBy: [senderId], // Sender has read the message by default
             reactions: [],
