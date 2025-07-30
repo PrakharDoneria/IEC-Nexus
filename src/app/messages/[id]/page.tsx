@@ -16,6 +16,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
 import { useParams, useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
+import { getMessaging, onMessage } from 'firebase/messaging';
+import app from '@/lib/firebase';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -154,12 +156,26 @@ export default function ChatPage() {
         }
     }, [conversationId, idToken, router, fetchUnreadCount]);
 
-
     useEffect(() => {
         if (conversationId && idToken) {
             fetchMessages(); 
         }
     }, [conversationId, idToken]); // Removed fetchMessages from dep array
+
+    // Real-time listener for new messages
+    useEffect(() => {
+        if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
+        
+        const messaging = getMessaging(app);
+        const unsubscribe = onMessage(messaging, (payload) => {
+            // If we get a notification for the current conversation, refetch messages
+            if (payload.data?.link?.includes(`/messages/${conversationId}`)) {
+                fetchMessages();
+            }
+        });
+
+        return () => unsubscribe();
+    }, [conversationId, fetchMessages]);
 
     useEffect(() => {
         if (!loading) {
@@ -397,3 +413,5 @@ export default function ChatPage() {
        </div>
     );
 }
+
+    

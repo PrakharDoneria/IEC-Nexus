@@ -18,6 +18,8 @@ import { toast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { formatDistanceToNow } from 'date-fns';
 import { Label } from '@/components/ui/label';
+import { getMessaging, onMessage } from 'firebase/messaging';
+import app from '@/lib/firebase';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -130,6 +132,20 @@ function ChatTab({ groupId }: { groupId: string }) {
     React.useEffect(() => {
         fetchMessages();
     }, [fetchMessages]);
+
+    // Real-time listener for new messages
+    React.useEffect(() => {
+        if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
+        const messaging = getMessaging(app);
+        const unsubscribe = onMessage(messaging, (payload) => {
+             // If we get a notification for the current group, refetch messages
+            if (payload.data?.link?.includes(`/groups/${groupId}`)) {
+                fetchMessages();
+            }
+        });
+
+        return () => unsubscribe();
+    }, [groupId, fetchMessages]);
     
      React.useEffect(() => {
         if (messages.length > 0 && !loading) {
