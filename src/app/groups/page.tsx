@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Image from "next/image";
+import Link from 'next/link';
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { NeoCard, NeoCardContent, NeoCardFooter, NeoCardHeader } from "@/components/NeoCard";
@@ -45,7 +46,9 @@ function GroupCard({ group }: { group: Group }) {
             </NeoCardHeader>
             <NeoCardFooter className="p-4 pt-2 flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">{group.memberCount} members</span>
-                <NeoButton size="sm">View</NeoButton>
+                <NeoButton size="sm" asChild>
+                    <Link href={`/groups/${group._id?.toString()}`}>View</Link>
+                </NeoButton>
             </NeoCardFooter>
         </NeoCard>
     )

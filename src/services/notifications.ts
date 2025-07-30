@@ -21,12 +21,14 @@ export async function sendNotification(userId: string, title: string, body: stri
     }
 
     // Check user's notification settings
-    const settings: NotificationSettings = user.notificationSettings || {
+    const settings: NotificationSettings = {
       newFollower: true,
       postLike: true,
       postComment: true,
       groupInvite: true,
       directMessage: true,
+      groupAnnouncement: true,
+      ...user.notificationSettings, // User's settings override defaults
     };
 
     if (settings[category] === false) {

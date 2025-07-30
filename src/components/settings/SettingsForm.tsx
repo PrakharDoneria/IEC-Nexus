@@ -17,6 +17,7 @@ const defaultSettings: NotificationSettings = {
   postComment: true,
   groupInvite: true,
   directMessage: true,
+  groupAnnouncement: true,
 };
 
 export function SettingsForm() {
@@ -29,7 +30,8 @@ export function SettingsForm() {
 
   useEffect(() => {
     if (user?.notificationSettings) {
-      setSettings(user.notificationSettings);
+      // Ensure all keys are present, falling back to default if a new setting was added
+      setSettings({ ...defaultSettings, ...user.notificationSettings });
     }
   }, [user]);
 
@@ -144,6 +146,16 @@ export function SettingsForm() {
                 checked={settings.directMessage}
                 onCheckedChange={() => handleToggle("directMessage")}
               />
+            </div>
+             <div className="flex items-center justify-between rounded-lg border-2 border-foreground p-4">
+                <Label htmlFor="groupAnnouncement" className="font-semibold">
+                    Group Announcement
+                </Label>
+                <Switch
+                    id="groupAnnouncement"
+                    checked={settings.groupAnnouncement}
+                    onCheckedChange={() => handleToggle("groupAnnouncement")}
+                />
             </div>
 
             <div className="flex justify-end">

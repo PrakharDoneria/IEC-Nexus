@@ -43,7 +43,7 @@ export type Group = {
   name: string;
   description: string;
   coverImage: string;
-  members: string[]; // Array of user IDs
+  members: (string | User)[]; // Array of user IDs or populated User objects
   createdBy: string; // User ID
   inviteCode: string;
   memberCount?: number; // This can be derived or stored
@@ -67,6 +67,25 @@ export type Message = {
     sender?: User; // populated
 };
 
+export type GroupMessage = {
+    _id?: ObjectId;
+    groupId: ObjectId;
+    senderId: string;
+    content: string;
+    timestamp: Date;
+    sender?: User; // populated
+};
+
+export type GroupAnnouncement = {
+    _id?: ObjectId;
+    groupId: ObjectId;
+    authorId: string;
+    content: string;
+    timestamp: Date;
+    author?: User; // populated
+};
+
+
 export type Conversation = {
     _id?: ObjectId;
     participants: string[]; // array of user IDs
@@ -79,11 +98,11 @@ export type Conversation = {
 export type NotificationSettings = {
     newFollower: boolean;
     postLike: boolean;
-
     postComment: boolean;
     groupInvite: boolean;
     directMessage: boolean;
-}
+    groupAnnouncement: boolean;
+};
 
 // Schemas for Coding Challenge
 export const ValidateSolutionInputSchema = z.object({
