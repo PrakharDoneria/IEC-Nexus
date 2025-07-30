@@ -156,17 +156,19 @@ function ChatTab({ groupId, currentUserRole }: { groupId: string, currentUserRol
     const [loading, setLoading] = React.useState(true);
     const [sending, setSending] = React.useState(false);
     const [editingMessage, setEditingMessage] = React.useState<GroupMessage | null>(null);
-    const { addListener } = useRealtime();
 
     const messagesEndRef = React.useRef<HTMLDivElement>(null);
+    const isFetching = React.useRef(false);
 
     const scrollToBottom = (behavior: 'smooth' | 'auto' = 'smooth') => {
         messagesEndRef.current?.scrollIntoView({ behavior });
     }
 
     const fetchMessages = React.useCallback(async (preventLoading = false) => {
-        if (!idToken) return;
+        if (!idToken || isFetching.current) return;
+        isFetching.current = true;
         if (!preventLoading) setLoading(true);
+
         try {
             const res = await fetch(`/api/groups/${groupId}/messages`, {
                 headers: { 'Authorization': `Bearer ${idToken}` }
@@ -178,20 +180,16 @@ function ChatTab({ groupId, currentUserRole }: { groupId: string, currentUserRol
             toast({ variant: 'destructive', title: 'Error', description: 'Could not load chat messages.' });
         } finally {
             if (!preventLoading) setLoading(false);
+            isFetching.current = false;
         }
     }, [groupId, idToken]);
 
 
-    // Real-time listener for new group messages
+    // Real-time polling for new messages
     React.useEffect(() => {
-        const unsubscribe = addListener(`group:${groupId}`, () => {
-            fetchMessages(true);
-        });
-        return unsubscribe;
-    }, [addListener, groupId, fetchMessages]);
-
-    React.useEffect(() => {
-        fetchMessages();
+        fetchMessages(); // Initial fetch
+        const intervalId = setInterval(() => fetchMessages(true), 5000); // Poll every 5 seconds
+        return () => clearInterval(intervalId); // Cleanup interval on component unmount
     }, [fetchMessages]);
     
      React.useEffect(() => {
@@ -212,6 +210,7 @@ function ChatTab({ groupId, currentUserRole }: { groupId: string, currentUserRol
                 });
                  if (!res.ok) throw new Error("Failed to edit message");
                  setMessages(prev => prev.map(m => m._id === editingMessage._id ? {...m, content: newMessage, isEdited: true} : m));
+                 await fetchMessages(true);
             } catch (error) {
                  toast({ variant: 'destructive', title: 'Error', description: 'Could not edit message.'});
             } finally {
@@ -229,8 +228,8 @@ function ChatTab({ groupId, currentUserRole }: { groupId: string, currentUserRol
                 body: JSON.stringify({ content: newMessage })
             });
              if (!res.ok) throw new Error('Failed to send message');
-             // The real-time listener will handle adding the message, so we just clear the input.
              setNewMessage('');
+             await fetchMessages(true); // Re-fetch immediately after sending
         } catch (error) {
             toast({ variant: 'destructive', title: 'Error', description: 'Could not send message.' });
         } finally {
@@ -253,7 +252,7 @@ function ChatTab({ groupId, currentUserRole }: { groupId: string, currentUserRol
                     body: JSON.stringify({ reason: payload?.reason })
                 });
                 if (!res.ok) throw new Error("Failed to delete message");
-                // The real-time listener will trigger a refetch
+                await fetchMessages(true);
             } catch (error) {
                  toast({ variant: 'destructive', title: 'Error', description: 'Could not delete message.'});
             }
