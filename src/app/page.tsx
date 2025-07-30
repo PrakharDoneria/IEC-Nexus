@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Loader2, Users } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { NotificationPermissionManager } from '@/components/layout/NotificationPermissionManager';
 
 export default function LandingPage() {
   const { user, authLoading } = useAuth();
@@ -28,6 +29,7 @@ export default function LandingPage() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
+      <NotificationPermissionManager />
       <main className="flex flex-col items-center justify-center text-center">
         <div className="mb-8 p-4 bg-primary border rounded-full">
           <Users className="h-12 w-12 text-primary-foreground" />

@@ -40,6 +40,7 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel"
+import { NotificationPermissionManager } from '@/components/layout/NotificationPermissionManager';
 
 function CreatePost({ onAddPost }: { onAddPost: (newPost: Post) => void }) {
   const [postContent, setPostContent] = useState('');
@@ -668,6 +669,7 @@ export default function FeedPage() {
 
   return (
     <div className="flex min-h-screen bg-background">
+      <NotificationPermissionManager />
       <AppSidebar />
       <div className="flex-1 flex flex-col pb-16 md:pb-0">
         <MobileNav pageTitle="Activity Feed">
