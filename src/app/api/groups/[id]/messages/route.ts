@@ -25,21 +25,46 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     const client = await clientPromise;
     const db = client.db();
 
-    const group = await db.collection('groups').findOne({ _id: groupId, members: userId });
+    const group = await db.collection('groups').findOne({ _id: groupId, 'members.userId': userId });
     if (!group) {
         return NextResponse.json({ message: 'Forbidden' }, { status: 403 });
     }
 
     const messages = await db.collection('groupMessages')
-        .find({ groupId })
-        .sort({ timestamp: 1 })
+        .aggregate([
+            { $match: { groupId } },
+            { $sort: { timestamp: 1 } },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'senderId',
+                    foreignField: 'id',
+                    as: 'senderInfo'
+                }
+            },
+            { $unwind: '$senderInfo' },
+            {
+                $project: {
+                    content: 1,
+                    timestamp: 1,
+                    senderId: 1,
+                    reactions: 1,
+                    isEdited: 1,
+                    sender: {
+                        id: '$senderInfo.id',
+                        name: '$senderInfo.name',
+                        avatar: '$senderInfo.avatar',
+                    }
+                }
+            }
+        ])
         .toArray();
 
     return NextResponse.json(messages);
 
   } catch (error) {
     console.error('Error fetching group messages:', error);
-    if (error.message.includes('auth/id-token-expired') || error.message.includes('auth/argument-error')) {
+    if (error instanceof Error && (error.message.includes('auth/id-token-expired') || error.message.includes('auth/argument-error'))) {
        return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
     return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
@@ -55,8 +80,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         }
         const decodedToken = await getAuth(admin.app()).verifyIdToken(idToken);
         const senderId = decodedToken.uid;
-        const senderName = decodedToken.name || "A member";
-
+        
         if (!ObjectId.isValid(params.id)) {
             return NextResponse.json({ message: 'Invalid group ID' }, { status: 400 });
         }
@@ -70,10 +94,16 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         const client = await clientPromise;
         const db = client.db();
 
-        const group = await db.collection('groups').findOne({ _id: groupId, members: senderId });
+        const group = await db.collection('groups').findOne({ _id: groupId, 'members.userId': senderId });
         if (!group) {
             return NextResponse.json({ message: 'Forbidden' }, { status: 403 });
         }
+        
+        const sender = await db.collection<User>('users').findOne({ id: senderId });
+        if (!sender) {
+             return NextResponse.json({ message: 'Sender not found' }, { status: 404 });
+        }
+
 
         const newMessage = {
             groupId,
@@ -85,14 +115,28 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         };
 
         const result = await db.collection('groupMessages').insertOne(newMessage);
-        const createdMessage = await db.collection('groupMessages').findOne({_id: result.insertedId});
+        
+        const createdMessage = await db.collection('groupMessages').aggregate([
+           { $match: { _id: result.insertedId } },
+           { $lookup: { from: 'users', localField: 'senderId', foreignField: 'id', as: 'senderInfo' }},
+           { $unwind: '$senderInfo' },
+           { $project: {
+                content: 1,
+                timestamp: 1,
+                senderId: 1,
+                reactions: 1,
+                isEdited: 1,
+                sender: { id: '$senderInfo.id', name: '$senderInfo.name', avatar: '$senderInfo.avatar' }
+           }}
+        ]).next();
+
 
         // Send notifications to all group members except the author
-        const notificationTitle = `New message in ${group.name} from ${senderName}`;
+        const notificationTitle = `New message in ${group.name} from ${sender.name}`;
         const notificationBody = content.substring(0, 100) + (content.length > 100 ? '...' : '');
         const notificationLink = `/groups/${group._id.toString()}`;
         
-        const membersToNotify = (group.members as string[]).filter(id => id !== senderId);
+        const membersToNotify = (group.members as any[]).filter(m => m.userId !== senderId).map(m => m.userId);
         for (const memberId of membersToNotify) {
             await sendNotification(memberId, notificationTitle, notificationBody, notificationLink, 'groupMessage');
         }
@@ -102,7 +146,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     } catch (error) {
         console.error('Error sending group message:', error);
-         if (error.message.includes('auth/id-token-expired') || error.message.includes('auth/argument-error')) {
+         if (error instanceof Error && (error.message.includes('auth/id-token-expired') || error.message.includes('auth/argument-error'))) {
             return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
         }
         return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });

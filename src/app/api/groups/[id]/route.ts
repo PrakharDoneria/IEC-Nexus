@@ -55,7 +55,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
   } catch (error) {
     console.error('Error fetching group details:', error);
-    if (error.code === 'auth/id-token-expired' || error.code === 'auth/argument-error') {
+    if (error instanceof Error && (error.message.includes('auth/id-token-expired') || error.message.includes('auth/argument-error'))) {
        return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
     return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
@@ -118,7 +118,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
     } catch (error) {
         console.error('Error updating group:', error);
-        if (error.code === 'auth/id-token-expired' || error.code === 'auth/argument-error') {
+        if (error instanceof Error && (error.message.includes('auth/id-token-expired') || error.message.includes('auth/argument-error'))) {
             return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
         }
         return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
@@ -166,7 +166,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
 
     } catch (error) {
         console.error('Error deleting group:', error);
-        if (error.code === 'auth/id-token-expired' || error.code === 'auth/argument-error') {
+        if (error instanceof Error && (error.message.includes('auth/id-token-expired') || error.message.includes('auth/argument-error'))) {
             return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
         }
         return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });

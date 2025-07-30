@@ -78,7 +78,7 @@ function GroupMessageActions({ message, onAction }: { message: GroupMessage, onA
     )
 }
 
-function ChatTab({ groupId, members }: { groupId: string, members: (GroupMember & User)[] }) {
+function ChatTab({ groupId }: { groupId: string }) {
     const { user, idToken } = useAuth();
     const [messages, setMessages] = React.useState<GroupMessage[]>([]);
     const [newMessage, setNewMessage] = React.useState('');
@@ -87,7 +87,6 @@ function ChatTab({ groupId, members }: { groupId: string, members: (GroupMember 
     const [editingMessage, setEditingMessage] = React.useState<GroupMessage | null>(null);
 
     const messagesEndRef = React.useRef<HTMLDivElement>(null);
-    const memberMap = React.useMemo(() => new Map(members.map(m => [m.id, m])), [members]);
     const isFetching = React.useRef(false);
 
     const scrollToBottom = () => {
@@ -104,20 +103,14 @@ function ChatTab({ groupId, members }: { groupId: string, members: (GroupMember 
             });
             if (!res.ok) throw new Error("Failed to fetch messages");
             const data = await res.json();
-            
-            const populatedMessages = data.map((msg: GroupMessage) => ({
-                ...msg,
-                sender: memberMap.get(msg.senderId)
-            }));
-            
-            setMessages(populatedMessages);
+            setMessages(data);
         } catch (error) {
             toast({ variant: 'destructive', title: 'Error', description: 'Could not load chat messages.' });
         } finally {
             if(!isBackground) setLoading(false);
             isFetching.current = false;
         }
-    }, [groupId, idToken, memberMap]);
+    }, [groupId, idToken]);
 
     React.useEffect(() => {
         fetchMessages();
@@ -168,7 +161,7 @@ function ChatTab({ groupId, members }: { groupId: string, members: (GroupMember 
              if (!res.ok) throw new Error('Failed to send message');
              const sentMessage = await res.json();
              
-             setMessages(prev => [...prev, { ...sentMessage, sender: memberMap.get(sentMessage.senderId) }]);
+             setMessages(prev => [...prev, sentMessage]);
              setNewMessage('');
         } catch (error) {
             toast({ variant: 'destructive', title: 'Error', description: 'Could not send message.' });
@@ -221,6 +214,7 @@ function ChatTab({ groupId, members }: { groupId: string, members: (GroupMember 
         <div className="flex flex-col h-full">
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
                 {messages.map((msg) => {
+                     if (!msg.sender) return null; // Don't render if sender info is missing
                      const isOwnMessage = msg.senderId === user?.id;
                      return (
                          <div key={msg._id?.toString()} className={cn("flex items-end gap-2 group", isOwnMessage ? "justify-end" : "justify-start")}>
@@ -704,7 +698,7 @@ export default function GroupPage() {
     }, [authLoading, fetchGroup]);
 
     const handleGroupUpdated = (updatedGroup: Group) => {
-        setGroup(updatedGroup);
+        setGroup(prev => ({...prev, ...updatedGroup}));
     };
 
     const myRole = group?.members.find(m => m.userId === user?.id)?.role;
@@ -748,7 +742,7 @@ export default function GroupPage() {
                             <TabsTrigger value="settings"><Settings className="mr-2 h-4 w-4"/>Settings</TabsTrigger>
                         </TabsList>
                         <TabsContent value="chat" className="flex-1 flex flex-col mt-0">
-                            <ChatTab groupId={groupId} members={group.members as (GroupMember & User)[]} />
+                            <ChatTab groupId={groupId} />
                         </TabsContent>
                         <TabsContent value="announcements" className="mt-0">
                             <AnnouncementsTab groupId={groupId} />

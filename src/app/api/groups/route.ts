@@ -68,14 +68,14 @@ export async function POST(req: NextRequest) {
     const client = await clientPromise;
     const db = client.db();
     
-    const inviteCode = randomBytes(4).toString('hex').slice(0, 6);
+    const inviteCode = randomBytes(4).toString('hex').toUpperCase();
 
     const newGroup = {
       name,
       description,
       createdBy: userId,
       members: [{ userId: userId, role: 'owner' }],
-      coverImage: 'https://placehold.co/400x150',
+      coverImage: 'https://placehold.co/400x150.png',
       inviteCode,
       timestamp: new Date(),
     };
@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
 
   } catch (error) {
     console.error('Error creating group:', error);
-    if (error.code === 'auth/id-token-expired' || error.code === 'auth/argument-error') {
+    if (error instanceof Error && (error.message.includes('auth/id-token-expired') || error.message.includes('auth/argument-error'))) {
        return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
     return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
