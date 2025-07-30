@@ -21,6 +21,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
+import Image from 'next/image';
 
 function SinglePostCard({ post: initialPost, onDelete }: { post: Post, onDelete: () => void }) {
     const { user, idToken } = useAuth();
@@ -128,13 +129,19 @@ function SinglePostCard({ post: initialPost, onDelete }: { post: Post, onDelete:
         <NeoCardContent className="px-4 sm:px-6 py-4">
             <p className="whitespace-pre-wrap text-lg">{post.content}</p>
             {post.resourceLink && (
-                <a href={post.resourceLink} target="_blank" rel="noopener noreferrer" className="mt-4 flex items-center gap-3 p-3 bg-secondary rounded-md border-2 border-foreground hover:bg-primary/20">
-                    <LinkIcon className="h-5 w-5 flex-shrink-0" />
-                    <span className="truncate text-sm font-medium">{post.resourceLink}</span>
-                </a>
+                 post.resourceLink.includes('stackblitz.com') ? (
+                    <div className="mt-4 w-full aspect-video border rounded-md overflow-hidden">
+                        <iframe src={post.resourceLink} className="w-full h-full" title="StackBlitz Code Embed"></iframe>
+                    </div>
+                ) : (
+                    <a href={post.resourceLink} target="_blank" rel="noopener noreferrer" className="mt-4 flex items-center gap-3 p-3 bg-secondary rounded-md border-2 border-foreground hover:bg-primary/20">
+                        <LinkIcon className="h-5 w-5 flex-shrink-0" />
+                        <span className="truncate text-sm font-medium">{post.resourceLink}</span>
+                    </a>
+                )
             )}
         </NeoCardContent>
-        <NeoCardFooter className="p-4 sm:p-6 pt-2 border-t-2 border-foreground">
+        <NeoCardFooter className="p-4 sm:p-6 pt-2 border-t">
             <div className="flex items-center gap-4 text-muted-foreground">
             <Button variant="ghost" size="sm" className="flex items-center gap-2" onClick={handleLike}>
                 <ThumbsUp className={cn("h-5 w-5", isLiked && "text-primary fill-primary")} /> {(post.likes || []).length} Likes
@@ -155,7 +162,7 @@ function CommentCard({ comment }: { comment: Comment }) {
                 <AvatarImage src={comment.author?.avatar} />
                 <AvatarFallback>{comment.author?.name.charAt(0)}</AvatarFallback>
             </Avatar>
-            <div className="flex-1 bg-secondary p-3 rounded-lg border-2 border-foreground">
+            <div className="flex-1 bg-secondary p-3 rounded-lg border">
                 <div className="flex items-baseline gap-2">
                     <p className="font-bold">{comment.author?.name}</p>
                     <p className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(comment.timestamp), { addSuffix: true })}</p>
@@ -221,7 +228,7 @@ function CommentSection({ postId, onCommentAdded }: { postId: string, onCommentA
                         <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1 flex gap-2">
-                        <Textarea placeholder="Add a comment..." value={commentText} onChange={(e) => setCommentText(e.target.value)} className="border-2 border-foreground" />
+                        <Textarea placeholder="Add a comment..." value={commentText} onChange={(e) => setCommentText(e.target.value)} />
                         <Button size="icon" onClick={handlePostComment} disabled={posting}>
                             {posting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
                         </Button>
@@ -293,7 +300,7 @@ export default function PostPage() {
     if (post) {
         return (
             <>
-                <header className="hidden md:flex h-16 items-center border-b-2 border-foreground bg-card px-4 md:px-6">
+                <header className="hidden md:flex h-16 items-center border-b bg-card px-4 md:px-6">
                     <h1 className="text-2xl font-headline font-bold">Post Details</h1>
                 </header>
                 <main className="flex-1 p-4 md:p-6 lg:p-8">

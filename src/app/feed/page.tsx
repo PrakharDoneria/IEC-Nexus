@@ -11,7 +11,7 @@ import { NeoButton } from '@/components/NeoButton';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { ThumbsUp, MessageCircle, Link as LinkIcon, Users, BookOpen, Search, Share2, MoreVertical, Trash2, Copy, Loader2, User as UserIcon } from 'lucide-react';
+import { ThumbsUp, MessageCircle, Link as LinkIcon, Users, BookOpen, Search, Share2, MoreVertical, Trash2, Copy, Loader2, User as UserIcon, Megaphone, Github } from 'lucide-react';
 import type { Post, User } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import {
@@ -34,24 +34,46 @@ import { useAuth } from '@/hooks/useAuth';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel"
 
 function CreatePost({ onAddPost }: { onAddPost: (newPost: Post) => void }) {
   const [postContent, setPostContent] = useState('');
   const [loading, setLoading] = useState(false);
   const { user, idToken } = useAuth();
+  const [isGithubModalOpen, setisGithubModalOpen] = useState(false);
+  const [githubLink, setGithubLink] = useState('');
 
   const handlePost = async () => {
-    if (!postContent.trim() || !idToken) return;
+    if ((!postContent.trim() && !githubLink.trim()) || !idToken) return;
     setLoading(true);
 
     try {
+       const payload: { content: string, resourceLink?: string } = { content: postContent };
+       if (githubLink) {
+         // Transform GitHub link to StackBlitz embed link
+         const url = new URL(githubLink);
+         const path = url.pathname.split('/').filter(Boolean);
+         if (path.length >= 2) {
+             const stackblitzUrl = `https://stackblitz.com/github/${path[0]}/${path[1]}`;
+             payload.resourceLink = stackblitzUrl;
+         } else {
+             throw new Error("Invalid GitHub repository URL.")
+         }
+       }
+
       const response = await fetch('/api/posts', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${idToken}`
         },
-        body: JSON.stringify({ content: postContent }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -61,16 +83,18 @@ function CreatePost({ onAddPost }: { onAddPost: (newPost: Post) => void }) {
       const newPost = await response.json();
       onAddPost(newPost);
       setPostContent('');
+      setGithubLink('');
+      setisGithubModalOpen(false);
       toast({
         title: "Post Created",
         description: "Your post is now live on the feed.",
       });
 
-    } catch (error) {
+    } catch (error: any) {
        toast({
         variant: "destructive",
         title: "Error",
-        description: "Could not create your post. Please try again.",
+        description: error.message || "Could not create your post. Please try again.",
       });
     } finally {
       setLoading(false);
@@ -94,9 +118,37 @@ function CreatePost({ onAddPost }: { onAddPost: (newPost: Post) => void }) {
               disabled={loading}
             />
             <div className="flex justify-between items-center">
-                <Button variant="ghost" size="icon" disabled={loading}>
-                    <LinkIcon className="h-5 w-5"/>
-                </Button>
+                <div className="flex gap-1">
+                    <Button variant="ghost" size="icon" disabled={loading}>
+                        <LinkIcon className="h-5 w-5"/>
+                    </Button>
+                     <Dialog open={isGithubModalOpen} onOpenChange={setisGithubModalOpen}>
+                        <DialogTrigger asChild>
+                            <Button variant="ghost" size="icon" disabled={loading}>
+                                <Github className="h-5 w-5"/>
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle className="font-headline">Share GitHub Repository</DialogTitle>
+                                <DialogDescription>Paste a link to a public GitHub repository. It will be embedded in your post using StackBlitz.</DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-2">
+                                <Label htmlFor="github-link">GitHub Repository URL</Label>
+                                <Input 
+                                    id="github-link" 
+                                    placeholder="https://github.com/user/repo" 
+                                    value={githubLink}
+                                    onChange={(e) => setGithubLink(e.target.value)}
+                                />
+                            </div>
+                            <NeoButton onClick={handlePost} disabled={loading}>
+                                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                                Post with Repo
+                            </NeoButton>
+                        </DialogContent>
+                    </Dialog>
+                </div>
                 <NeoButton onClick={handlePost} disabled={loading}>
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                   Post
@@ -272,10 +324,16 @@ function PostCard({ post: initialPost, currentUser, onDelete }: { post: Post; cu
       <NeoCardContent className="px-4 sm:px-6 py-4">
         <p className="whitespace-pre-wrap">{post.content}</p>
         {post.resourceLink && (
-            <a href={post.resourceLink} target="_blank" rel="noopener noreferrer" className="mt-4 flex items-center gap-3 p-3 bg-secondary rounded-md border hover:bg-primary/20">
-                <LinkIcon className="h-5 w-5 flex-shrink-0" />
-                <span className="truncate text-sm font-medium">{post.resourceLink}</span>
-            </a>
+            post.resourceLink.includes('stackblitz.com') ? (
+                <div className="mt-4 w-full aspect-video border rounded-md overflow-hidden">
+                    <iframe src={post.resourceLink} className="w-full h-full" title="StackBlitz Code Embed"></iframe>
+                </div>
+            ) : (
+                <a href={post.resourceLink} target="_blank" rel="noopener noreferrer" className="mt-4 flex items-center gap-3 p-3 bg-secondary rounded-md border hover:bg-primary/20">
+                    <LinkIcon className="h-5 w-5 flex-shrink-0" />
+                    <span className="truncate text-sm font-medium">{post.resourceLink}</span>
+                </a>
+            )
         )}
       </NeoCardContent>
       <NeoCardFooter className="p-4 sm:p-6 pt-0">
@@ -413,15 +471,74 @@ function SearchBar() {
   )
 }
 
+function AnnouncementCarousel({ announcements }: { announcements: any[] }) {
+    if (announcements.length === 0) return null;
+
+    return (
+        <NeoCard>
+            <NeoCardHeader className="p-4 pb-0">
+                 <h2 className="font-headline font-bold text-lg flex items-center gap-2"><Megaphone className="h-5 w-5"/> Recent Announcements</h2>
+            </NeoCardHeader>
+            <NeoCardContent className="p-0">
+                <Carousel className="w-full" opts={{ loop: true }}>
+                    <CarouselContent>
+                        {announcements.map((item, index) => (
+                             <CarouselItem key={index}>
+                                <div className="p-4">
+                                    <div className="bg-secondary p-4 rounded-lg">
+                                        <p className="font-semibold text-sm">
+                                            From <Link href={`/groups/${item.group._id}`} className="font-bold hover:underline">{item.group.name}</Link>
+                                        </p>
+                                        <p className="mt-1 truncate">{item.content}</p>
+                                        <p className="text-xs text-muted-foreground mt-2">
+                                            {formatDistanceToNow(new Date(item.timestamp), { addSuffix: true })}
+                                        </p>
+                                    </div>
+                                </div>
+                            </CarouselItem>
+                        ))}
+                    </CarouselContent>
+                     <CarouselPrevious className="left-2" />
+                     <CarouselNext className="right-2" />
+                </Carousel>
+            </NeoCardContent>
+        </NeoCard>
+    );
+}
+
 export default function FeedPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { user, authLoading } = useAuth();
+  const { user, idToken, authLoading } = useAuth();
   const observer = useRef<IntersectionObserver>();
   const isFetching = useRef(false);
+  
+  const [announcements, setAnnouncements] = useState([]);
+  const [loadingAnnouncements, setLoadingAnnouncements] = useState(true);
+
+  useEffect(() => {
+    const fetchAnnouncements = async () => {
+        if (!idToken) return;
+        setLoadingAnnouncements(true);
+        try {
+            const res = await fetch('/api/announcements/feed', { headers: { 'Authorization': `Bearer ${idToken}`}});
+            const data = await res.json();
+            if (res.ok) {
+                setAnnouncements(data);
+            }
+        } catch (e) {
+            console.error("Could not fetch announcements", e);
+        } finally {
+            setLoadingAnnouncements(false);
+        }
+    }
+    if (idToken) {
+        fetchAnnouncements();
+    }
+  }, [idToken]);
 
   const fetchPosts = useCallback(async (pageNum: number) => {
     if (isFetching.current) return;
@@ -508,6 +625,7 @@ export default function FeedPage() {
         <main className="flex-1 p-4 md:p-6 lg:p-8 flex gap-8">
             <div className="flex-1 space-y-6">
                 <CreatePost onAddPost={handleAddPost} />
+                 {!loadingAnnouncements && <AnnouncementCarousel announcements={announcements} />}
                 <div className="space-y-6">
                     {posts.map((post, index) => {
                         if (posts.length === index + 1) {

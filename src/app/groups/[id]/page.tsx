@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -212,7 +213,7 @@ function ChatTab({ groupId, members }: { groupId: string, members: User[] }) {
     }
 
     return (
-        <div className="flex flex-col h-[60vh]">
+        <div className="flex flex-col h-full">
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
                 {messages.map((msg) => {
                      const isOwnMessage = msg.senderId === user?.id;
@@ -249,7 +250,7 @@ function ChatTab({ groupId, members }: { groupId: string, members: User[] }) {
                 })}
                 <div ref={messagesEndRef} />
             </div>
-             <div className="p-4 border-t">
+             <div className="p-4 border-t bg-card">
                 {editingMessage && (
                     <div className="flex items-center justify-between bg-secondary p-2 rounded-md mb-2 border">
                         <div>
@@ -629,7 +630,7 @@ export default function GroupPage() {
     return (
         <div className="flex min-h-screen bg-background">
             <AppSidebar />
-            <div className="flex-1 flex flex-col pb-16 md:pb-0">
+            <div className="flex-1 flex flex-col h-screen overflow-hidden">
                 <MobileNav />
                 <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-card px-4 md:px-6">
                     <Button variant="ghost" size="icon" onClick={() => router.push('/groups')}>
@@ -641,25 +642,25 @@ export default function GroupPage() {
                         <p className="text-xs text-muted-foreground">{group.members.length} members</p>
                     </div>
                 </header>
-                <main className="flex-1">
-                    <Tabs defaultValue="chat" className="w-full">
-                        <TabsList className="m-4">
+                <main className="flex-1 overflow-y-auto">
+                    <Tabs defaultValue="chat" className="w-full h-full flex flex-col">
+                        <TabsList className="m-4 shrink-0">
                             <TabsTrigger value="chat"><MessageSquare className="mr-2 h-4 w-4"/>Chat</TabsTrigger>
                             <TabsTrigger value="announcements"><Megaphone className="mr-2 h-4 w-4"/>Announcements</TabsTrigger>
                             <TabsTrigger value="members"><Users className="mr-2 h-4 w-4"/>Members</TabsTrigger>
                             {isOwner && <TabsTrigger value="settings"><Settings className="mr-2 h-4 w-4"/>Settings</TabsTrigger>}
                         </TabsList>
-                        <TabsContent value="chat">
+                        <TabsContent value="chat" className="flex-1 flex flex-col mt-0">
                             <ChatTab groupId={groupId} members={group.members as User[]} />
                         </TabsContent>
-                        <TabsContent value="announcements">
+                        <TabsContent value="announcements" className="mt-0">
                             <AnnouncementsTab groupId={groupId} />
                         </TabsContent>
-                        <TabsContent value="members">
+                        <TabsContent value="members" className="mt-0">
                             <MembersTab members={group.members as User[]} />
                         </TabsContent>
                          {isOwner && (
-                             <TabsContent value="settings">
+                             <TabsContent value="settings" className="mt-0">
                                 <SettingsTab group={group} onGroupUpdated={handleGroupUpdated} />
                             </TabsContent>
                          )}

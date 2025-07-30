@@ -73,8 +73,8 @@ export async function POST(req: NextRequest) {
     
     const { content, resourceLink } = await req.json();
 
-    if (!content) {
-      return NextResponse.json({ message: 'Content is required' }, { status: 400 });
+    if (!content && !resourceLink) {
+      return NextResponse.json({ message: 'Content or a resource link is required' }, { status: 400 });
     }
 
     const client = await clientPromise;
@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
 
     const newPost = {
       authorId,
-      content,
+      content: content || "",
       resourceLink: resourceLink || null,
       timestamp: new Date(),
       likes: [],
