@@ -153,7 +153,7 @@ export default function EditProfilePage() {
                    <div className="space-y-2">
                         <Label>Banner Image</Label>
                         <div className="w-full aspect-[3/1] bg-secondary rounded-md overflow-hidden relative">
-                             <Image src={bannerImage} alt="Banner preview" layout="fill" objectFit="cover" />
+                             {bannerImage && <Image src={bannerImage} alt="Banner preview" layout="fill" objectFit="cover" />}
                         </div>
                         <div className="flex gap-2">
                             <Input 
