@@ -6,7 +6,7 @@ import Image from "next/image";
 import { useAuth } from "@/hooks/useAuth";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { MobileNav } from "@/components/layout/MobileNav";
-import { NeoCard, NeoCardContent, NeoCardHeader, NeoCardFooter } from "@/components/NeoCard";
+import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -137,19 +137,19 @@ export default function EditProfilePage() {
       <div className="flex-1 flex flex-col">
         <MobileNav />
         <header className="hidden md:flex h-16 items-center border-b bg-card px-4 md:px-6">
-          <h1 className="text-2xl font-headline font-bold">Edit Profile</h1>
+          <h1 className="text-2xl font-bold">Edit Profile</h1>
         </header>
         <main className="flex-1 p-4 md:p-6 lg:p-8 flex justify-center">
           <div className="w-full max-w-3xl">
             <form onSubmit={handleSubmit}>
-              <NeoCard>
-                <NeoCardHeader>
-                  <h2 className="font-headline text-2xl font-bold">Public Profile</h2>
+              <Card>
+                <CardHeader>
+                  <h2 className="text-2xl font-bold">Public Profile</h2>
                   <p className="text-muted-foreground">
                     This information will be visible to others on the platform.
                   </p>
-                </NeoCardHeader>
-                <NeoCardContent className="space-y-8 p-6">
+                </CardHeader>
+                <CardContent className="space-y-8 p-6">
                    <div className="space-y-2">
                         <Label>Banner Image</Label>
                         <div className="w-full aspect-[16/5] bg-secondary rounded-lg overflow-hidden relative">
@@ -215,14 +215,14 @@ export default function EditProfilePage() {
                     />
                      <p className="text-xs text-muted-foreground">Your email address cannot be changed.</p>
                   </div>
-                </NeoCardContent>
-                <NeoCardFooter className="flex justify-end p-4 border-t">
+                </CardContent>
+                <CardFooter className="flex justify-end p-4 border-t">
                   <Button type="submit" disabled={loading}>
                     {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Save Changes
                   </Button>
-                </NeoCardFooter>
-              </NeoCard>
+                </CardFooter>
+              </Card>
             </form>
           </div>
         </main>

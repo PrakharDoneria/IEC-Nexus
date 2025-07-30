@@ -312,7 +312,7 @@ export default function ChatPage() {
             <AppSidebar />
             <div className="flex-1 flex flex-col h-screen">
                 <MobileNav pageTitle={participant.name} />
-                <header className="hidden md:flex h-16 shrink-0 items-center border-b-2 border-foreground bg-card px-4 md:px-6">
+                <header className="hidden md:flex h-16 shrink-0 items-center border-b bg-card px-4 md:px-6">
                     <Link href={`/profile/${participant.id}`} className="flex items-center gap-3">
                         <Avatar>
                             <AvatarImage src={participant.avatar} />
@@ -369,7 +369,7 @@ export default function ChatPage() {
 
                 <footer className="p-4 border-t bg-card shrink-0 fixed bottom-16 md:relative md:bottom-0 w-full">
                      {editingMessage && (
-                        <div className="flex items-center justify-between bg-secondary p-2 rounded-md mb-2 border-2 border-foreground">
+                        <div className="flex items-center justify-between bg-secondary p-2 rounded-md mb-2 border">
                             <div>
                                 <p className="font-bold text-sm">Editing Message</p>
                                 <p className="text-xs text-muted-foreground truncate">{editingMessage.content}</p>
@@ -413,5 +413,3 @@ export default function ChatPage() {
        </div>
     );
 }
-
-    

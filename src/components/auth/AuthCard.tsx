@@ -1,7 +1,7 @@
 
 import Link from 'next/link';
 import { Users } from 'lucide-react';
-import { NeoCard, NeoCardContent, NeoCardHeader } from '@/components/NeoCard';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
 interface AuthCardProps {
@@ -26,19 +26,19 @@ export function AuthCard({
       <div className="w-full max-w-md">
         <div className="flex justify-center mb-6">
           <Link href="/" aria-label="Home">
-            <div className="p-3 bg-primary text-primary-foreground rounded-full">
+            <div className="p-3 bg-primary text-primary-foreground rounded-full border">
               <Users className="h-10 w-10" />
             </div>
           </Link>
         </div>
-        <NeoCard>
-          <NeoCardHeader>
+        <Card>
+          <CardHeader>
             <div className="text-center">
-              <h1 className="font-headline text-3xl font-bold">{title}</h1>
+              <h1 className="text-3xl font-bold">{title}</h1>
               <p className="text-muted-foreground">{description}</p>
             </div>
-          </NeoCardHeader>
-          <NeoCardContent>
+          </CardHeader>
+          <CardContent>
             {children}
             <div className="mt-6 text-center text-sm">
               {footerText}{' '}
@@ -46,8 +46,8 @@ export function AuthCard({
                 {footerLinkText}
               </Link>
             </div>
-          </NeoCardContent>
-        </NeoCard>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

@@ -105,7 +105,7 @@ export function AppSidebar() {
     )}>
       <div className="flex-1 flex flex-col gap-y-4 overflow-y-auto">
         <header className={cn("flex h-16 shrink-0 items-center border-b px-4", isCollapsed && "justify-center")}>
-           <Link href="/feed" className="flex items-center gap-2 font-headline font-semibold">
+           <Link href="/feed" className="flex items-center gap-2 font-semibold">
             <div className="p-2 bg-primary text-primary-foreground rounded-lg">
               <Users className="h-6 w-6" />
             </div>

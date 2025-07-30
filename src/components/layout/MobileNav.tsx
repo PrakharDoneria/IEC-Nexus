@@ -35,14 +35,14 @@ export function MobileNav({ children, pageTitle }: { children?: React.ReactNode,
 
   return (
     <>
-      <header className="md:hidden sticky top-0 flex h-16 items-center justify-between gap-4 border-b-2 border-foreground bg-card px-4 z-10">
+      <header className="md:hidden sticky top-0 flex h-16 items-center justify-between gap-4 border-b bg-card px-4 z-10">
         <div className="flex items-center gap-2">
-             <Link href="/feed" className="flex items-center gap-2 font-headline font-semibold text-lg">
-                <div className="p-1.5 bg-primary border-2 border-foreground rounded-md">
-                    <Users className="h-5 w-5 text-primary-foreground" />
+             <Link href="/feed" className="flex items-center gap-2 font-bold text-lg">
+                <div className="p-1.5 bg-primary text-primary-foreground rounded-md border">
+                    <Users className="h-5 w-5" />
                 </div>
             </Link>
-            {pageTitle && <h1 className="font-headline text-xl font-bold truncate">{pageTitle}</h1>}
+            {pageTitle && <h1 className="text-xl font-bold truncate">{pageTitle}</h1>}
         </div>
         <div className="flex items-center">
             {children ? children : (
@@ -55,7 +55,7 @@ export function MobileNav({ children, pageTitle }: { children?: React.ReactNode,
 
 
       {/* Bottom Navigation */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-card border-t-2 border-foreground h-16 z-10 grid grid-cols-5 justify-around items-center">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-card border-t h-16 z-10 grid grid-cols-5 justify-around items-center">
         {bottomNavItems.map(item => {
           const href = item.href === '/profile' && user ? `/profile/${user.id}` : item.href;
           const isActive = (
@@ -80,5 +80,3 @@ export function MobileNav({ children, pageTitle }: { children?: React.ReactNode,
     </>
   );
 }
-
-    

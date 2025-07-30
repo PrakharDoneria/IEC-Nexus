@@ -8,7 +8,7 @@ import app from "@/lib/firebase";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { NeoButton } from "@/components/NeoButton";
+import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
@@ -89,7 +89,6 @@ export default function SignupPage() {
             type="text" 
             placeholder="Your Name" 
             required 
-            className="border-foreground border-2"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
@@ -101,7 +100,6 @@ export default function SignupPage() {
             type="email" 
             placeholder="name@example.com" 
             required 
-            className="border-foreground border-2"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
@@ -112,7 +110,6 @@ export default function SignupPage() {
             id="password" 
             type="password" 
             required 
-            className="border-foreground border-2"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
@@ -137,10 +134,10 @@ export default function SignupPage() {
             Faculty must sign up with a verified @ieccollege.com email.
           </p>
         </div>
-        <NeoButton type="submit" className="w-full" disabled={loading}>
+        <Button type="submit" className="w-full" disabled={loading}>
           {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Create Account
-        </NeoButton>
+        </Button>
       </form>
     </AuthCard>
   );

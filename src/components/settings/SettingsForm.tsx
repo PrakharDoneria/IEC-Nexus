@@ -2,8 +2,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { NeoButton } from "@/components/NeoButton";
-import { NeoCard, NeoCardContent, NeoCardHeader } from "@/components/NeoCard";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import type { NotificationSettings } from "@/lib/types";
@@ -72,23 +72,23 @@ export function SettingsForm() {
 
   if (authLoading) {
       return (
-          <NeoCard>
-              <NeoCardContent className="p-6 flex justify-center">
+          <Card>
+              <CardContent className="p-6 flex justify-center">
                   <Loader2 className="h-8 w-8 animate-spin" />
-              </NeoCardContent>
-          </NeoCard>
+              </CardContent>
+          </Card>
       )
   }
 
   return (
     <div className="w-full max-w-2xl mx-auto">
       <form onSubmit={handleSubmit}>
-        <NeoCard>
-          <NeoCardHeader>
+        <Card>
+          <CardHeader>
             <div className="flex items-center gap-4">
                  <BellDot className="h-8 w-8 text-primary" />
                 <div>
-                    <h2 className="font-headline text-2xl font-bold">
+                    <h2 className="text-2xl font-bold">
                         Notification Settings
                     </h2>
                     <p className="text-muted-foreground">
@@ -96,8 +96,8 @@ export function SettingsForm() {
                     </p>
                 </div>
             </div>
-          </NeoCardHeader>
-          <NeoCardContent className="space-y-6">
+          </CardHeader>
+          <CardContent className="space-y-6">
             <div className="flex items-center justify-between rounded-lg border p-4">
               <Label htmlFor="newFollower" className="font-semibold">
                 New Follower
@@ -170,7 +170,7 @@ export function SettingsForm() {
             </div>
 
             <div className="flex justify-end">
-                 <NeoButton type="submit" disabled={loading || saved}>
+                 <Button type="submit" disabled={loading || saved}>
                     {loading ? (
                         <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -184,10 +184,10 @@ export function SettingsForm() {
                     ) : (
                         "Save Preferences"
                     )}
-                </NeoButton>
+                </Button>
             </div>
-          </NeoCardContent>
-        </NeoCard>
+          </CardContent>
+        </Card>
       </form>
     </div>
   );

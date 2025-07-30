@@ -9,10 +9,9 @@ import app from "@/lib/firebase";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { NeoButton } from "@/components/NeoButton";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -102,7 +101,6 @@ export default function LoginPage() {
             type="email" 
             placeholder="name@ieccollege.com" 
             required 
-            className="border-foreground border-2"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
@@ -121,22 +119,21 @@ export default function LoginPage() {
             id="password" 
             type="password" 
             required 
-            className="border-foreground border-2"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
         </div>
         
         {unverifiedUser ? (
-          <NeoButton type="button" className="w-full" onClick={handleResendVerification} disabled={loading}>
+          <Button type="button" className="w-full" onClick={handleResendVerification} disabled={loading}>
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Resend Verification Email
-          </NeoButton>
+          </Button>
         ) : (
-          <NeoButton type="submit" className="w-full" disabled={loading}>
+          <Button type="submit" className="w-full" disabled={loading}>
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Login
-          </NeoButton>
+          </Button>
         )}
       </form>
     </AuthCard>

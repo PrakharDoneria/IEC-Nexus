@@ -6,7 +6,7 @@ import Image from "next/image";
 import Link from 'next/link';
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { MobileNav } from "@/components/layout/MobileNav";
-import { NeoCard, NeoCardContent, NeoCardFooter, NeoCardHeader } from "@/components/NeoCard";
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Group } from "@/lib/types";
 import { Plus, LogIn, Loader2 } from "lucide-react";
@@ -36,21 +36,21 @@ import { useRouter } from 'next/navigation';
 
 function GroupCard({ group }: { group: Group }) {
     return (
-        <NeoCard className="overflow-hidden transition-transform hover:-translate-y-1">
+        <Card className="overflow-hidden transition-transform hover:-translate-y-1">
             <div className="h-32 bg-secondary border-b">
                 <Image src={group.coverImage} alt={`${group.name} cover`} width={400} height={150} className="w-full h-full object-cover" data-ai-hint="group cover"/>
             </div>
-            <NeoCardHeader className="p-4">
+            <CardHeader className="p-4">
                 <h3 className="text-xl font-bold">{group.name}</h3>
                 <p className="text-sm text-muted-foreground h-10 overflow-hidden">{group.description}</p>
-            </NeoCardHeader>
-            <NeoCardFooter className="p-4 pt-2 flex justify-between items-center">
+            </CardHeader>
+            <CardFooter className="p-4 pt-2 flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">{group.memberCount} members</span>
                 <Button size="sm" asChild>
                     <Link href={`/groups/${group._id?.toString()}`}>View</Link>
                 </Button>
-            </NeoCardFooter>
-        </NeoCard>
+            </CardFooter>
+        </Card>
     )
 }
 
@@ -277,5 +277,3 @@ export default function GroupsPage() {
     </div>
   );
 }
-
-    

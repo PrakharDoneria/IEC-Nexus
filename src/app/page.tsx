@@ -29,10 +29,10 @@ export default function LandingPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
       <main className="flex flex-col items-center justify-center text-center">
-        <div className="mb-8 p-4 bg-primary border-2 border-foreground rounded-full">
+        <div className="mb-8 p-4 bg-primary border rounded-full">
           <Users className="h-12 w-12 text-primary-foreground" />
         </div>
-        <h1 className="font-headline text-5xl md:text-7xl font-bold text-foreground">
+        <h1 className="text-5xl md:text-7xl font-bold text-foreground">
           IEC Nexus
         </h1>
         <p className="mt-4 max-w-xl text-lg text-muted-foreground">
@@ -42,7 +42,6 @@ export default function LandingPage() {
           <Button
             asChild
             size="lg"
-            className="font-bold border-2 border-foreground shadow-[4px_4px_0px_hsl(var(--foreground))] transition-all hover:shadow-none hover:translate-x-1 hover:translate-y-1"
           >
             <Link href="/login">Login</Link>
           </Button>
@@ -50,7 +49,6 @@ export default function LandingPage() {
             asChild
             variant="secondary"
             size="lg"
-            className="font-bold border-2 border-foreground shadow-[4px_4px_0px_hsl(var(--foreground))] transition-all hover:shadow-none hover:translate-x-1 hover:translate-y-1"
           >
             <Link href="/signup">Sign Up</Link>
           </Button>

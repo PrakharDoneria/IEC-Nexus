@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
@@ -7,7 +6,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { MobileNav } from '@/components/layout/MobileNav';
-import { NeoCard, NeoCardContent, NeoCardFooter, NeoCardHeader } from '@/components/NeoCard';
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -41,7 +40,6 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel"
-import { NeoButton } from '@/components/NeoButton';
 
 function CreatePost({ onAddPost }: { onAddPost: (newPost: Post) => void }) {
   const [postContent, setPostContent] = useState('');
@@ -103,8 +101,8 @@ function CreatePost({ onAddPost }: { onAddPost: (newPost: Post) => void }) {
   };
 
   return (
-    <NeoCard>
-      <NeoCardContent className="p-4">
+    <Card>
+      <CardContent className="p-4">
         <div className="flex gap-4">
           <Avatar className="hidden sm:block">
             <AvatarImage src={user?.avatar} data-ai-hint="user avatar" />
@@ -157,8 +155,8 @@ function CreatePost({ onAddPost }: { onAddPost: (newPost: Post) => void }) {
             </div>
           </div>
         </div>
-      </NeoCardContent>
-    </NeoCard>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -206,7 +204,7 @@ function ShareDialog({ post }: { post: Post }) {
              <div className="space-y-2">
               <Label htmlFor="embed-code" className="font-semibold">Embed Code</Label>
                <div className="flex gap-2">
-                <Textarea id="embed-code" value={embedCode} readOnly className="font-code text-sm" rows={4}/>
+                <Textarea id="embed-code" value={embedCode} readOnly className="font-mono text-sm" rows={4}/>
                 <Button size="icon" onClick={() => copyToClipboard(embedCode, 'Embed Code')}><Copy className="h-5 w-5"/></Button>
               </div>
             </div>
@@ -292,8 +290,8 @@ function PostCard({ post: initialPost, currentUser, onDelete }: { post: Post; cu
 
 
   return (
-    <NeoCard>
-      <NeoCardHeader className="p-4 pb-2 sm:p-6 sm:pb-2">
+    <Card>
+      <CardHeader className="p-4 pb-2 sm:p-6 sm:pb-2">
         <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Avatar>
@@ -321,8 +319,8 @@ function PostCard({ post: initialPost, currentUser, onDelete }: { post: Post; cu
                 </DropdownMenu>
             )}
         </div>
-      </NeoCardHeader>
-      <NeoCardContent className="px-4 sm:px-6 py-4">
+      </CardHeader>
+      <CardContent className="px-4 sm:px-6 py-4">
         <p className="whitespace-pre-wrap">{post.content}</p>
         {post.resourceLink && (
             post.resourceLink.includes('stackblitz.com') ? (
@@ -342,8 +340,8 @@ function PostCard({ post: initialPost, currentUser, onDelete }: { post: Post; cu
                 </a>
             )
         )}
-      </NeoCardContent>
-      <NeoCardFooter className="p-4 sm:p-6 pt-0">
+      </CardContent>
+      <CardFooter className="p-4 sm:p-6 pt-0">
         <div className="flex items-center gap-1 text-muted-foreground">
           <Button variant="ghost" size="sm" className="flex items-center gap-2" onClick={handleLike}>
             <ThumbsUp className={cn("h-5 w-5", isLiked && "text-primary fill-primary")} /> {(post.likes || []).length}
@@ -353,8 +351,8 @@ function PostCard({ post: initialPost, currentUser, onDelete }: { post: Post; cu
           </Button>
            <ShareDialog post={post} />
         </div>
-      </NeoCardFooter>
-    </NeoCard>
+      </CardFooter>
+    </Card>
   );
 }
 
@@ -386,11 +384,11 @@ function RightSidebar() {
 
     return (
         <aside className="hidden lg:block w-80 xl:w-96 space-y-6">
-            <NeoCard>
-                <NeoCardHeader className="p-4">
+            <Card>
+                <CardHeader className="p-4">
                     <h2 className="font-bold text-lg flex items-center gap-2"><Users className="h-5 w-5"/> My Groups</h2>
-                </NeoCardHeader>
-                <NeoCardContent className="p-4 pt-0 space-y-3">
+                </CardHeader>
+                <CardContent className="p-4 pt-0 space-y-3">
                    {loading ? (
                        <div className="flex justify-center items-center h-20">
                            <Loader2 className="h-6 w-6 animate-spin"/>
@@ -409,27 +407,27 @@ function RightSidebar() {
                            ))}
                        </ul>
                    )}
-                </NeoCardContent>
-                <NeoCardFooter className="p-4 pt-0">
+                </CardContent>
+                <CardFooter className="p-4 pt-0">
                     <Button variant="link" className="p-0 h-auto" asChild>
                         <Link href="/groups">View all groups</Link>
                     </Button>
-                </NeoCardFooter>
-            </NeoCard>
+                </CardFooter>
+            </Card>
 
-             <NeoCard>
-                <NeoCardHeader className="p-4">
+             <Card>
+                <CardHeader className="p-4">
                     <h2 className="font-bold text-lg flex items-center gap-2"><BookOpen className="h-5 w-5"/> Suggested Resources</h2>
-                </NeoCardHeader>
-                <NeoCardContent className="p-4 pt-0">
+                </CardHeader>
+                <CardContent className="p-4 pt-0">
                    <p className="text-sm text-muted-foreground">AI-powered resource suggestions based on recent activity will appear here.</p>
-                </NeoCardContent>
-                 <NeoCardFooter className="p-4 pt-0">
+                </CardContent>
+                 <CardFooter className="p-4 pt-0">
                     <Button variant="link" className="p-0 h-auto" asChild>
                         <Link href="/resources">Generate Resources</Link>
                     </Button>
-                </NeoCardFooter>
-            </NeoCard>
+                </CardFooter>
+            </Card>
         </aside>
     )
 }
@@ -524,11 +522,11 @@ function AnnouncementCarousel({ announcements }: { announcements: any[] }) {
     if (announcements.length === 0) return null;
 
     return (
-        <NeoCard>
-            <NeoCardHeader className="p-4 pb-0">
+        <Card>
+            <CardHeader className="p-4 pb-0">
                  <h2 className="font-bold text-lg flex items-center gap-2"><Megaphone className="h-5 w-5"/> Recent Announcements</h2>
-            </NeoCardHeader>
-            <NeoCardContent className="p-0">
+            </CardHeader>
+            <CardContent className="p-0">
                 <Carousel className="w-full" opts={{ loop: announcements.length > 1 }}>
                     <CarouselContent>
                         {announcements.map((item, index) => (
@@ -564,8 +562,8 @@ function AnnouncementCarousel({ announcements }: { announcements: any[] }) {
                         </>
                     )}
                 </Carousel>
-            </NeoCardContent>
-        </NeoCard>
+            </CardContent>
+        </Card>
     );
 }
 

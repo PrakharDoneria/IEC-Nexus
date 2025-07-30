@@ -40,7 +40,7 @@ function ConversationList({ conversations, loading, currentUserId }: { conversat
         return (
             <div className="flex flex-col items-center justify-center text-center p-8 h-full">
                 <MessagesSquare className="h-16 w-16 text-muted-foreground mb-4" />
-                <h3 className="font-headline text-2xl font-bold">No Conversations</h3>
+                <h3 className="text-2xl font-bold">No Conversations</h3>
                 <p className="text-muted-foreground max-w-sm mx-auto mt-2">
                     You haven't started any conversations yet. Find someone to chat with on their profile page.
                 </p>
@@ -49,7 +49,7 @@ function ConversationList({ conversations, loading, currentUserId }: { conversat
     }
 
     return (
-        <nav className="divide-y-2 divide-border">
+        <nav className="divide-y">
            {conversations.map(convo => {
                if (!convo.participant) return null; // Skip convos without participant data
 
@@ -159,8 +159,8 @@ export default function MessagesPage() {
             <AppSidebar />
             <div className="flex-1 flex flex-col pb-16 md:pb-0">
                 <MobileNav pageTitle="Messages" />
-                 <header className="hidden md:flex h-16 items-center border-b-2 bg-card px-4 md:px-6">
-                    <h1 className="text-2xl font-headline font-bold">Messages</h1>
+                 <header className="hidden md:flex h-16 items-center border-b bg-card px-4 md:px-6">
+                    <h1 className="text-2xl font-bold">Messages</h1>
                 </header>
                 <main className="flex-1 overflow-y-auto">
                     <ConversationList conversations={conversations} loading={loadingConvos} currentUserId={user?.id} />

@@ -7,7 +7,7 @@ import { MobileNav } from '@/components/layout/MobileNav';
 import { User } from '@/lib/types';
 import { Loader2, Trophy, Award } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { NeoCard, NeoCardContent, NeoCardHeader } from '@/components/NeoCard';
+import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Link from 'next/link';
 
@@ -19,8 +19,8 @@ function LeaderboardRow({ user, rank }: { user: User; rank: number }) {
   ];
 
   return (
-    <NeoCard>
-      <NeoCardContent className="p-3">
+    <Card>
+      <CardContent className="p-3">
         <div className="flex items-center gap-4">
           <div className="flex items-center justify-center w-10">
             {rank < 3 ? (
@@ -29,7 +29,7 @@ function LeaderboardRow({ user, rank }: { user: User; rank: number }) {
               <span className="font-bold text-lg text-muted-foreground">{rank + 1}</span>
             )}
           </div>
-          <Avatar className="h-12 w-12 border-2 border-foreground">
+          <Avatar className="h-12 w-12 border">
             <AvatarImage src={user.avatar} data-ai-hint="user avatar" />
             <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
           </Avatar>
@@ -44,8 +44,8 @@ function LeaderboardRow({ user, rank }: { user: User; rank: number }) {
             <span>{user.score || 0}</span>
           </div>
         </div>
-      </NeoCardContent>
-    </NeoCard>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -79,8 +79,8 @@ export default function LeaderboardPage() {
       <AppSidebar />
       <div className="flex-1 flex flex-col pb-16 md:pb-0">
         <MobileNav />
-        <header className="hidden md:flex h-16 items-center border-b-2 border-foreground bg-card px-4 md:px-6">
-          <h1 className="text-2xl font-headline font-bold flex items-center gap-2">
+        <header className="hidden md:flex h-16 items-center border-b bg-card px-4 md:px-6">
+          <h1 className="text-2xl font-bold flex items-center gap-2">
             <Trophy className="h-6 w-6 text-primary"/>
             Leaderboard
           </h1>
@@ -97,11 +97,11 @@ export default function LeaderboardPage() {
                     <LeaderboardRow key={user.id} user={user} rank={index} />
                 ))}
                  {!loading && !error && leaderboard.length === 0 && (
-                    <NeoCard>
-                        <NeoCardContent className="p-8 text-center">
+                    <Card>
+                        <CardContent className="p-8 text-center">
                             <p className="text-muted-foreground">The leaderboard is empty. Solve some challenges to get on the board!</p>
-                        </NeoCardContent>
-                    </NeoCard>
+                        </CardContent>
+                    </Card>
                  )}
             </div>
         </main>

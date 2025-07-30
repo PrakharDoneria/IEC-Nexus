@@ -8,15 +8,15 @@ import { MobileNav } from '@/components/layout/MobileNav';
 import { User, Post, Group } from '@/lib/types';
 import { Loader2, Search as SearchIcon, Users, FileText, User as UserIcon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { NeoCard, NeoCardContent, NeoCardHeader } from '@/components/NeoCard';
+import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { NeoButton } from '@/components/NeoButton';
+import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
 function UserResultCard({ user }: { user: User }) {
   return (
-    <NeoCard>
-      <NeoCardContent className="p-4 flex items-center justify-between">
+    <Card>
+      <CardContent className="p-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Avatar className="h-12 w-12">
             <AvatarImage src={user.avatar} />
@@ -27,11 +27,11 @@ function UserResultCard({ user }: { user: User }) {
             <p className="text-sm text-muted-foreground">{user.role}</p>
           </div>
         </div>
-        <NeoButton asChild size="sm">
+        <Button asChild size="sm">
           <Link href={`/profile/${user.id}`}>View Profile</Link>
-        </NeoButton>
-      </NeoCardContent>
-    </NeoCard>
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -87,7 +87,7 @@ export default function SearchPage() {
       <div className="space-y-4">
         {results.users.length > 0 && (
           <div>
-            <h2 className="font-headline text-xl font-bold mb-3 flex items-center gap-2"><UserIcon className="h-5 w-5"/> Users</h2>
+            <h2 className="text-xl font-bold mb-3 flex items-center gap-2"><UserIcon className="h-5 w-5"/> Users</h2>
             <div className="space-y-3">
               {results.users.map(user => <UserResultCard key={user.id} user={user} />)}
             </div>
@@ -102,14 +102,14 @@ export default function SearchPage() {
       <AppSidebar />
       <div className="flex-1 flex flex-col">
         <MobileNav />
-        <header className="flex h-16 items-center border-b-2 border-foreground bg-card px-4 md:px-6">
+        <header className="flex h-16 items-center border-b bg-card px-4 md:px-6">
           <form onSubmit={handleSearch} className="w-full max-w-2xl mx-auto">
             <div className="relative">
               <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
                 type="search"
                 placeholder="Search for users, posts, or groups..."
-                className="pl-10 border-2 border-foreground text-base"
+                className="pl-10 text-base"
                 value={query}
                 onChange={e => setQuery(e.target.value)}
               />

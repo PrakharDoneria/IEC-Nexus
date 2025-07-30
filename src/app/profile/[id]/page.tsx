@@ -16,12 +16,12 @@ import { toast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import Image from "next/image";
-import { NeoCard, NeoCardContent, NeoCardHeader } from "@/components/NeoCard";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 function ProfilePostCard({ post }: { post: Post }) {
   return (
-    <NeoCard>
-        <NeoCardHeader className="flex flex-row items-center gap-3">
+    <Card>
+        <CardHeader className="flex flex-row items-center gap-3">
              <Avatar className="h-11 w-11">
                 <AvatarImage src={post.author.avatar} data-ai-hint="user avatar" />
                 <AvatarFallback>{post.author.name.charAt(0)}</AvatarFallback>
@@ -30,8 +30,8 @@ function ProfilePostCard({ post }: { post: Post }) {
                 <p className="font-bold">{post.author.name}</p>
                 <p className="text-sm text-muted-foreground">{formatDistanceToNow(new Date(post.timestamp), { addSuffix: true })}</p>
               </div>
-        </NeoCardHeader>
-      <NeoCardContent>
+        </CardHeader>
+      <CardContent>
         <p className="whitespace-pre-wrap">{post.content}</p>
         {post.resourceLink && (
             post.resourceLink.includes('stackblitz.com') ? (
@@ -51,8 +51,8 @@ function ProfilePostCard({ post }: { post: Post }) {
                 </a>
             )
         )}
-      </NeoCardContent>
-    </NeoCard>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -309,7 +309,7 @@ export default function ProfilePage() {
             </div>
             <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="-mt-16 sm:-mt-20 flex items-end space-x-5">
-                    <Avatar className="h-32 w-32 sm:h-40 sm:w-40 ring-4 ring-card border-2 border-foreground">
+                    <Avatar className="h-32 w-32 sm:h-40 sm:w-40 ring-4 ring-card border">
                         <AvatarImage src={profileUser.avatar} data-ai-hint="user avatar" />
                         <AvatarFallback className="text-5xl">{profileUser.name.slice(0,2)}</AvatarFallback>
                     </Avatar>
@@ -341,11 +341,11 @@ export default function ProfilePage() {
           <div className="max-w-5xl mx-auto p-4 sm:p-8 grid md:grid-cols-3 gap-8">
             {/* Left Column (About) */}
             <div className="md:col-span-1 space-y-6">
-                <NeoCard>
-                    <NeoCardHeader>
+                <Card>
+                    <CardHeader>
                         <h2 className="font-bold text-xl">About</h2>
-                    </NeoCardHeader>
-                    <NeoCardContent className="space-y-4 text-sm">
+                    </CardHeader>
+                    <CardContent className="space-y-4 text-sm">
                        <p>{profileUser.bio || "At IEC"}</p>
                        <div className="flex flex-col space-y-3 pt-2">
                             <div className="flex items-center gap-3">
@@ -383,19 +383,19 @@ export default function ProfilePage() {
                                 <FollowListDialog userList={profileUser.followers as User[] || []} title="Followers"/>
                             </Dialog>
                           </div>
-                    </NeoCardContent>
-                </NeoCard>
+                    </CardContent>
+                </Card>
             </div>
             {/* Right Column (Posts) */}
             <div className="md:col-span-2 space-y-6">
                  {userPosts.length > 0 ? (
                     userPosts.map(post => <ProfilePostCard key={post._id?.toString()} post={post} />)
                 ) : (
-                    <NeoCard>
-                      <NeoCardContent className="p-6 text-center text-muted-foreground">
+                    <Card>
+                      <CardContent className="p-6 text-center text-muted-foreground">
                         This user hasn't posted anything yet.
-                      </NeoCardContent>
-                    </NeoCard>
+                      </CardContent>
+                    </Card>
                 )}
             </div>
           </div>

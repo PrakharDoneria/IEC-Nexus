@@ -11,7 +11,7 @@ import {
     type ValidateSolutionInput,
     type ValidateSolutionOutput,
 } from "@/ai/flows/validate-solution";
-import { NeoButton } from "@/components/NeoButton";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2, Lightbulb, AlertTriangle, RefreshCw, CheckCircle, XCircle, TimerIcon } from "lucide-react";
@@ -168,14 +168,14 @@ export function CodingChallenge() {
             </p>
             </CardHeader>
             <CardContent className="text-center">
-            <NeoButton size="lg" onClick={fetchChallenge} disabled={loading || !canAttemptChallenge}>
+            <Button size="lg" onClick={fetchChallenge} disabled={loading || !canAttemptChallenge}>
                 {loading ? (
                 <>
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                     Generating...
                 </>
                 ) : canAttemptChallenge ? "Generate Today's Challenge" : "Challenge Attempted Today"}
-            </NeoButton>
+            </Button>
             {!canAttemptChallenge && <p className="text-sm text-muted-foreground mt-2">Please come back tomorrow for a new challenge.</p>}
             </CardContent>
         </Card>
@@ -210,9 +210,9 @@ export function CodingChallenge() {
                         </div>
                          <div className="flex items-center gap-4">
                             <ChallengeTimer difficulty={challenge.difficulty} onTimeUp={handleTimeUp} />
-                            <NeoButton size="icon" variant="secondary" onClick={fetchChallenge} disabled={loading}>
+                            <Button size="icon" variant="secondary" onClick={fetchChallenge} disabled={loading}>
                                 <RefreshCw className="h-5 w-5"/>
-                            </NeoButton>
+                            </Button>
                         </div>
                     </div>
                 </CardHeader>
@@ -244,10 +244,10 @@ export function CodingChallenge() {
                 </CardContent>
                 <CardFooter className="flex justify-between items-center">
                     <p className="text-xs text-muted-foreground">Submit your code to get it validated by AI.</p>
-                    <NeoButton onClick={handleValidate} disabled={validating || isTimeUp || !!validationResult}>
+                    <Button onClick={handleValidate} disabled={validating || isTimeUp || !!validationResult}>
                         {validating && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                         Validate Solution
-                    </NeoButton>
+                    </Button>
                 </CardFooter>
             </Card>
 
