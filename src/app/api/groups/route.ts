@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
 
     const groups = await db.collection('groups')
       .aggregate([
-        { $match: { members: userId } },
+        { $match: { "members.userId": userId } },
         {
           $addFields: {
             memberCount: { $size: "$members" }
@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
       name,
       description,
       createdBy: userId,
-      members: [userId],
+      members: [{ userId: userId, role: 'owner' }],
       coverImage: 'https://placehold.co/400x150',
       inviteCode,
       timestamp: new Date(),

@@ -56,6 +56,14 @@ const validationPrompt = ai.definePrompt({
   If it is incorrect, the feedback must clearly explain the logical error or what the code fails to do.
   Do not just state the code is wrong, explain WHY.
   `,
+    config: {
+        safetySettings: [
+            { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
+            { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
+            { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
+            { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
+        ],
+    },
 });
 
 const validateSolutionFlow = ai.defineFlow(

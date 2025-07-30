@@ -32,17 +32,23 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         return NextResponse.json({ message: 'Group not found' }, { status: 404 });
     }
 
-    if (!group.members.includes(userId)) {
+    if (!group.members.some((m: any) => m.userId === userId)) {
          return NextResponse.json({ message: 'Forbidden' }, { status: 403 });
     }
     
     // Populate member details
-    const members = await db.collection<User>('users').find(
-        { id: { $in: group.members } },
+    const memberUserIds = group.members.map((m: any) => m.userId);
+    const memberUsers = await db.collection<User>('users').find(
+        { id: { $in: memberUserIds } },
         { projection: { name: 1, avatar: 1, role: 1, id: 1, email: 1 } }
     ).toArray();
 
-    group.members = members;
+    const userMap = new Map(memberUsers.map(u => [u.id, u]));
+
+    group.members = group.members.map((m: any) => ({
+      ...m,
+      ...userMap.get(m.userId)
+    }));
 
 
     return NextResponse.json(group, { status: 200 });

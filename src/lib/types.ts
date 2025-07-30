@@ -39,12 +39,17 @@ export type Post = {
   resourceLink?: string;
 };
 
+export type GroupMember = {
+    userId: string;
+    role: 'owner' | 'moderator' | 'member';
+}
+
 export type Group = {
   _id?: ObjectId;
   name: string;
   description: string;
   coverImage: string;
-  members: (string | User)[]; // Array of user IDs or populated User objects
+  members: GroupMember[]; // Array of GroupMember objects
   createdBy: string; // User ID
   inviteCode: string;
   memberCount?: number; // This can be derived or stored

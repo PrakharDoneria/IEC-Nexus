@@ -10,10 +10,10 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Group, GroupMessage, GroupAnnouncement, User } from '@/lib/types';
+import { Group, GroupMessage, GroupAnnouncement, User, GroupMember } from '@/lib/types';
 import { useAuth } from '@/hooks/useAuth';
 import { useParams, useRouter } from 'next/navigation';
-import { Loader2, ArrowLeft, MessageSquare, Megaphone, Users, Settings, Send, Copy, Camera, Trash2, Smile, Pencil, MoreHorizontal, ThumbsUp, X } from 'lucide-react';
+import { Loader2, ArrowLeft, MessageSquare, Megaphone, Users, Settings, Send, Copy, Camera, Trash2, Smile, Pencil, MoreHorizontal, ThumbsUp, X, LogOut, ShieldCheck, User as UserIcon } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { formatDistanceToNow } from 'date-fns';
@@ -34,8 +34,13 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 
 
 const MAX_IMAGE_SIZE_MB = 5;
@@ -73,7 +78,7 @@ function GroupMessageActions({ message, onAction }: { message: GroupMessage, onA
     )
 }
 
-function ChatTab({ groupId, members }: { groupId: string, members: User[] }) {
+function ChatTab({ groupId, members }: { groupId: string, members: (GroupMember & User)[] }) {
     const { user, idToken } = useAuth();
     const [messages, setMessages] = React.useState<GroupMessage[]>([]);
     const [newMessage, setNewMessage] = React.useState('');
@@ -382,25 +387,67 @@ function AnnouncementsTab({ groupId }: { groupId: string }) {
     )
 }
 
-function MembersTab({ members }: { members: User[] }) {
+function MembersTab({ group, onMemberRoleChange }: { group: Group, onMemberRoleChange: () => void }) {
+    const { user: currentUser, idToken } = useAuth();
+    const isOwner = group.createdBy === currentUser?.id;
+
+    const handleRoleChange = async (memberId: string, role: 'moderator' | 'member') => {
+        if (!idToken || !isOwner || memberId === currentUser?.id) return;
+        
+        try {
+            const res = await fetch(`/api/groups/${group._id}/members`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+                body: JSON.stringify({ memberId, role })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message || "Failed to update role");
+
+            toast({ title: "Success", description: "Member role has been updated." });
+            onMemberRoleChange();
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Error', description: error.message });
+        }
+    };
+
     return (
         <div className="p-4 space-y-3">
-            {members.map(member => (
-                <Card key={member.id}>
+            {group.members.map(member => (
+                <Card key={member.userId}>
                     <CardContent className="p-3 flex justify-between items-center">
                         <div className="flex items-center gap-3">
                             <Avatar>
-                                <AvatarImage src={member.avatar} />
-                                <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
+                                <AvatarImage src={(member as any).avatar} />
+                                <AvatarFallback>{(member as any).name.charAt(0)}</AvatarFallback>
                             </Avatar>
                             <div>
-                                <p className="font-bold">{member.name}</p>
-                                <p className="text-sm text-muted-foreground">{member.role}</p>
+                                <p className="font-bold">{(member as any).name}</p>
+                                <p className="text-sm text-muted-foreground capitalize">{member.role}</p>
                             </div>
                         </div>
-                         <Button size="sm" asChild>
-                            <a href={`/profile/${member.id}`}>View</a>
-                        </Button>
+                        <div className="flex items-center gap-2">
+                            {isOwner && member.userId !== currentUser?.id && (
+                                 <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="secondary" size="sm">
+                                            {member.role === 'moderator' ? <ShieldCheck className="mr-2 h-4 w-4"/> : <UserIcon className="mr-2 h-4 w-4"/> }
+                                             Change Role
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent>
+                                        <DropdownMenuLabel>Assign Role</DropdownMenuLabel>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuRadioGroup value={member.role} onValueChange={(value) => handleRoleChange(member.userId, value as 'moderator' | 'member')}>
+                                            <DropdownMenuRadioItem value="member">Member</DropdownMenuRadioItem>
+                                            <DropdownMenuRadioItem value="moderator">Moderator</DropdownMenuRadioItem>
+                                        </DropdownMenuRadioGroup>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            )}
+                            <Button size="sm" asChild>
+                                <a href={`/profile/${member.userId}`}>View</a>
+                            </Button>
+                        </div>
                     </CardContent>
                 </Card>
             ))}
@@ -409,16 +456,19 @@ function MembersTab({ members }: { members: User[] }) {
 }
 
 function SettingsTab({ group, onGroupUpdated }: { group: Group, onGroupUpdated: (updatedGroup: Group) => void }) {
-    const { idToken } = useAuth();
+    const { user, idToken } = useAuth();
     const router = useRouter();
     const [name, setName] = React.useState(group.name);
     const [description, setDescription] = React.useState(group.description);
     const [loading, setLoading] = React.useState(false);
     const [deleting, setDeleting] = React.useState(false);
+    const [leaving, setLeaving] = React.useState(false);
     
     const [coverImage, setCoverImage] = React.useState(group.coverImage);
     const [coverImageData, setCoverImageData] = React.useState<string | null>(null);
     const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+    const isOwner = group.createdBy === user?.id;
 
     const handleCoverImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -492,75 +542,128 @@ function SettingsTab({ group, onGroupUpdated }: { group: Group, onGroupUpdated: 
             setDeleting(false);
         }
     }
+    
+    const handleLeaveGroup = async () => {
+        setLeaving(true);
+        try {
+             if (!idToken) throw new Error("Authentication required.");
+             const res = await fetch(`/api/groups/${group._id}/leave`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${idToken}` }
+             });
+             const data = await res.json();
+             if (!res.ok) throw new Error(data.message || "Failed to leave group.");
+             toast({ title: "Success", description: "You have left the group." });
+             router.push('/groups');
+        } catch (error: any) {
+             toast({ variant: 'destructive', title: 'Error', description: error.message });
+        } finally {
+            setLeaving(false);
+        }
+    };
+
 
     return (
         <div className="p-4 space-y-8">
-            <form onSubmit={handleUpdate} className="space-y-6">
-                <div className="space-y-2">
-                    <Label>Group Cover Image</Label>
-                    <div className="flex items-center gap-4">
-                        <Image src={coverImage} alt="Group cover preview" width={128} height={128} className="w-32 h-20 rounded-md object-cover border" />
-                        <input type="file" ref={fileInputRef} onChange={handleCoverImageChange} accept="image/png, image/jpeg" className="hidden"/>
-                        <Button type="button" variant="secondary" onClick={() => fileInputRef.current?.click()}>
-                            <Camera className="mr-2 h-4 w-4"/>
-                            Change
+            {isOwner && (
+                <form onSubmit={handleUpdate} className="space-y-6">
+                    <div className="space-y-2">
+                        <Label>Group Cover Image</Label>
+                        <div className="flex items-center gap-4">
+                            <Image src={coverImage} alt="Group cover preview" width={128} height={128} className="w-32 h-20 rounded-md object-cover border" />
+                            <input type="file" ref={fileInputRef} onChange={handleCoverImageChange} accept="image/png, image/jpeg" className="hidden"/>
+                            <Button type="button" variant="secondary" onClick={() => fileInputRef.current?.click()}>
+                                <Camera className="mr-2 h-4 w-4"/>
+                                Change
+                            </Button>
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="name">Group Name</Label>
+                        <Input id="name" value={name} onChange={e => setName(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="description">Group Description</Label>
+                        <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} />
+                    </div>
+                     <div className="flex justify-end">
+                        <Button type="submit" disabled={loading}>
+                            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                            Save Changes
                         </Button>
                     </div>
+                </form>
+            )}
+
+            <div className="space-y-2">
+                <Label>Invite Code</Label>
+                <div className="flex gap-2">
+                    <Input value={group.inviteCode} readOnly className="font-mono" />
+                    <Button type="button" variant="secondary" size="icon" onClick={copyInviteCode}><Copy className="h-5 w-5"/></Button>
                 </div>
-                <div className="space-y-2">
-                    <Label htmlFor="name">Group Name</Label>
-                    <Input id="name" value={name} onChange={e => setName(e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="description">Group Description</Label>
-                    <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                    <Label>Invite Code</Label>
-                    <div className="flex gap-2">
-                        <Input value={group.inviteCode} readOnly className="font-mono" />
-                        <Button type="button" variant="secondary" size="icon" onClick={copyInviteCode}><Copy className="h-5 w-5"/></Button>
-                    </div>
-                </div>
-                <div className="flex justify-end">
-                    <Button type="submit" disabled={loading}>
-                        {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
-                        Save Changes
-                    </Button>
-                </div>
-            </form>
+            </div>
 
             <div className="border-t pt-6">
                 <h3 className="font-bold text-lg text-destructive">Danger Zone</h3>
-                <p className="text-sm text-muted-foreground mt-1">This action cannot be undone. This will permanently delete the group, including all messages and announcements.</p>
+                <p className="text-sm text-muted-foreground mt-1">These actions cannot be undone.</p>
                 <div className="mt-4">
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                         <Button variant="destructive" disabled={deleting}>
-                            <Trash2 className="mr-2 h-4 w-4"/>
-                            Delete this group
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete the <strong>{group.name}</strong> group and all of its data.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                             onClick={handleDelete}
-                             disabled={deleting}
-                          >
-                            {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
-                            Yes, delete group
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                    {isOwner ? (
+                         <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="destructive" disabled={deleting}>
+                                    <Trash2 className="mr-2 h-4 w-4"/>
+                                    Delete this group
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    This action will permanently delete the <strong>{group.name}</strong> group and all of its data.
+                                </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    onClick={handleDelete}
+                                    disabled={deleting}
+                                >
+                                    {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                                    Yes, delete group
+                                </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    ) : (
+                         <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="destructive" disabled={leaving}>
+                                    <LogOut className="mr-2 h-4 w-4"/>
+                                    Leave Group
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                <AlertDialogTitle>Are you sure you want to leave?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    You will need a new invite code to rejoin the <strong>{group.name}</strong> group.
+                                </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    onClick={handleLeaveGroup}
+                                    disabled={leaving}
+                                >
+                                    {leaving && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                                    Yes, leave group
+                                </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    )}
                 </div>
             </div>
         </div>
@@ -604,7 +707,9 @@ export default function GroupPage() {
         setGroup(updatedGroup);
     };
 
-    const isOwner = user && group && user.id === group.createdBy;
+    const myRole = group?.members.find(m => m.userId === user?.id)?.role;
+    const isOwner = myRole === 'owner';
+    const isModerator = myRole === 'moderator';
 
     if (loading || authLoading) {
         return (
@@ -640,22 +745,20 @@ export default function GroupPage() {
                             <TabsTrigger value="chat"><MessageSquare className="mr-2 h-4 w-4"/>Chat</TabsTrigger>
                             <TabsTrigger value="announcements"><Megaphone className="mr-2 h-4 w-4"/>Announcements</TabsTrigger>
                             <TabsTrigger value="members"><Users className="mr-2 h-4 w-4"/>Members</TabsTrigger>
-                            {isOwner && <TabsTrigger value="settings"><Settings className="mr-2 h-4 w-4"/>Settings</TabsTrigger>}
+                            <TabsTrigger value="settings"><Settings className="mr-2 h-4 w-4"/>Settings</TabsTrigger>
                         </TabsList>
                         <TabsContent value="chat" className="flex-1 flex flex-col mt-0">
-                            <ChatTab groupId={groupId} members={group.members as User[]} />
+                            <ChatTab groupId={groupId} members={group.members as (GroupMember & User)[]} />
                         </TabsContent>
                         <TabsContent value="announcements" className="mt-0">
                             <AnnouncementsTab groupId={groupId} />
                         </TabsContent>
                         <TabsContent value="members" className="mt-0">
-                            <MembersTab members={group.members as User[]} />
+                            <MembersTab group={group} onMemberRoleChange={fetchGroup} />
                         </TabsContent>
-                         {isOwner && (
-                             <TabsContent value="settings" className="mt-0">
-                                <SettingsTab group={group} onGroupUpdated={handleGroupUpdated} />
-                            </TabsContent>
-                         )}
+                         <TabsContent value="settings" className="mt-0">
+                            <SettingsTab group={group} onGroupUpdated={handleGroupUpdated} />
+                        </TabsContent>
                     </Tabs>
                 </main>
             </div>
