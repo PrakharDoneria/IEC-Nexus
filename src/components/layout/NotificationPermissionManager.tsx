@@ -16,36 +16,42 @@ export function NotificationPermissionManager() {
 
   const checkPermission = useCallback(() => {
     if ('Notification' in window) {
-      setPermissionStatus(Notification.permission);
-      if (Notification.permission === 'default') {
+      const currentPermission = Notification.permission;
+      setPermissionStatus(currentPermission);
+      // Only show the dialog if permission is 'default' (not yet asked)
+      // Or if it's denied, to inform the user how to change it.
+      if (currentPermission === 'default' || currentPermission === 'denied') {
         setShowPermissionDialog(true);
-      } else if (Notification.permission === 'denied') {
-        setShowPermissionDialog(true); // Also show for denied, but with a different message
       }
     }
   }, []);
 
   useEffect(() => {
-    // Check permission after a short delay to not be too intrusive on page load
-    const timer = setTimeout(checkPermission, 2000);
-    return () => clearTimeout(timer);
+    // Only run this check on the client-side
+    if (typeof window !== 'undefined') {
+        // Wait a bit before checking, so it's not too intrusive.
+        const timer = setTimeout(checkPermission, 3000);
+        return () => clearTimeout(timer);
+    }
   }, [checkPermission]);
 
   const requestPermission = async () => {
-    if (!('Notification' in window) || !('serviceWorker' in navigator) || !process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY) {
-      console.log('Push notifications not supported or VAPID key missing.');
+    if (!('Notification' in window)) {
+      console.log('Push notifications not supported.');
       return;
     }
 
     try {
       const permission = await Notification.requestPermission();
       setPermissionStatus(permission);
+      setShowPermissionDialog(false); // Close dialog after interaction
 
       if (permission === 'granted' && idToken) {
-        setShowPermissionDialog(false);
+        // Now that permission is granted, get the token
         const messaging = getMessaging(app);
         const fcmToken = await getToken(messaging, { vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY });
         if (fcmToken) {
+          // Send the token to your server
           await fetch('/api/users/fcm-token', {
             method: 'POST',
             headers: {
@@ -60,6 +66,10 @@ export function NotificationPermissionManager() {
       console.error('An error occurred while requesting permission. ', error);
     }
   };
+
+  if (permissionStatus === 'granted') {
+    return null; // Don't render anything if permission is already granted.
+  }
 
   return (
     <Dialog open={showPermissionDialog} onOpenChange={setShowPermissionDialog}>

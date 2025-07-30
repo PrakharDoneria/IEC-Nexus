@@ -4,12 +4,10 @@
 import * as React from 'react';
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { getAuth, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { getMessaging, getToken } from "firebase/messaging";
 import app from '@/lib/firebase';
 import type { User } from '@/lib/types';
 import { useRouter, usePathname } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
-import { toast } from './use-toast';
 
 interface AuthContextType {
   user: User | null;
@@ -31,38 +29,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [authLoading, setAuthLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
-
-   const requestNotificationPermission = useCallback(async (token: string) => {
-    if (!('Notification' in window) || !('serviceWorker' in navigator) || !process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY) {
-      console.log('Push notifications not supported or VAPID key missing.');
-      return;
-    }
-    
-    const permission = await Notification.requestPermission();
-    
-    if (permission === 'granted') {
-      try {
-        const messaging = getMessaging(app);
-        const fcmToken = await getToken(messaging, { vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY });
-        if (fcmToken) {
-          await fetch('/api/users/fcm-token', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ token: fcmToken })
-          });
-        } else {
-          console.log('No registration token available. Request permission to generate one.');
-        }
-      } catch (error) {
-        console.error('An error occurred while retrieving token. ', error);
-      }
-    } else {
-      console.log('Unable to get permission to notify.');
-    }
-  }, []);
 
   const fetchUserProfile = useCallback(async (token: string) => {
     const res = await fetch('/api/users/current', {
@@ -99,15 +65,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const token = await fbUser.getIdToken();
         setIdToken(token);
         
-        const fetchedUser = await fetchUserProfile(token);
+        await fetchUserProfile(token);
 
-        if (fetchedUser) {
-            // Permission is now requested only after a user profile is successfully fetched.
-            requestNotificationPermission(token);
-             if (publicRoutes.includes(pathname)) {
-                router.push('/feed');
-            }
+        if (publicRoutes.includes(pathname)) {
+            router.push('/feed');
         }
+
       } else {
         if (fbUser && !fbUser.emailVerified) {
            // User exists but email is not verified. Let them go to login page to see verification message.
@@ -115,7 +78,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setFirebaseUser(null);
         setUser(null);
         setIdToken(null);
-        if (!publicRoutes.includes(pathname)) {
+        if (!publicRoutes.includes(pathname) && !pathname.startsWith('/posts/')) {
             router.push('/login');
         }
       }
@@ -123,7 +86,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     return () => unsubscribe();
-  }, [pathname, router, requestNotificationPermission, fetchUserProfile]);
+  }, [pathname, router, fetchUserProfile]);
 
   const logout = async () => {
     const auth = getAuth(app);
@@ -131,7 +94,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     router.push('/login');
   };
 
-  if (authLoading && !user) {
+  if (authLoading && !user && !publicRoutes.includes(pathname) && !pathname.startsWith('/posts/')) {
     return (
         <div className="flex min-h-screen w-full items-center justify-center bg-background">
             <Loader2 className="h-10 w-10 animate-spin" />
