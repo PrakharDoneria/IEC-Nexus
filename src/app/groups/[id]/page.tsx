@@ -41,6 +41,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 
 
 const MAX_IMAGE_SIZE_MB = 5;
@@ -803,7 +804,18 @@ export default function GroupPage() {
         <div className="flex min-h-screen bg-background">
             <AppSidebar />
             <div className="flex-1 flex flex-col h-screen overflow-hidden">
-                <MobileNav pageTitle={group.name} />
+                 <header className="md:hidden sticky top-0 flex h-16 items-center justify-between gap-4 border-b bg-card px-4 z-10">
+                    <div className="flex items-center gap-3">
+                         <Button variant="ghost" size="icon" onClick={() => router.push('/groups')}>
+                            <ArrowLeft className="h-5 w-5" />
+                        </Button>
+                        <Image src={group.coverImage} alt="group cover" width={40} height={40} className="rounded-md object-cover h-10 w-10 border"/>
+                         <div>
+                            <h1 className="text-lg font-bold truncate">{group.name}</h1>
+                            <p className="text-xs text-muted-foreground">{group.members.length} members</p>
+                        </div>
+                    </div>
+                 </header>
                 <header className="hidden md:flex h-16 shrink-0 items-center gap-2 border-b bg-card px-4 md:px-6">
                     <Button variant="ghost" size="icon" onClick={() => router.push('/groups')}>
                         <ArrowLeft className="h-5 w-5" />
@@ -816,12 +828,17 @@ export default function GroupPage() {
                 </header>
                 <main className="flex-1 overflow-y-auto">
                     <Tabs defaultValue="announcements" className="w-full h-full flex flex-col">
-                        <TabsList className="m-4 shrink-0">
-                            <TabsTrigger value="announcements"><Megaphone className="mr-2 h-4 w-4"/>Announcements</TabsTrigger>
-                            <TabsTrigger value="chat"><MessageSquare className="mr-2 h-4 w-4"/>Chat</TabsTrigger>
-                            <TabsTrigger value="members"><Users className="mr-2 h-4 w-4"/>Members</TabsTrigger>
-                            <TabsTrigger value="settings"><Settings className="mr-2 h-4 w-4"/>Settings</TabsTrigger>
-                        </TabsList>
+                         <div className="px-4 pt-4">
+                            <ScrollArea>
+                                <TabsList>
+                                    <TabsTrigger value="announcements"><Megaphone className="mr-2 h-4 w-4"/>Announcements</TabsTrigger>
+                                    <TabsTrigger value="chat"><MessageSquare className="mr-2 h-4 w-4"/>Chat</TabsTrigger>
+                                    <TabsTrigger value="members"><Users className="mr-2 h-4 w-4"/>Members</TabsTrigger>
+                                    <TabsTrigger value="settings"><Settings className="mr-2 h-4 w-4"/>Settings</TabsTrigger>
+                                </TabsList>
+                                <ScrollBar orientation="horizontal" />
+                            </ScrollArea>
+                        </div>
                         <TabsContent value="chat" className="flex-1 flex flex-col mt-0">
                             <ChatTab groupId={groupId} />
                         </TabsContent>
