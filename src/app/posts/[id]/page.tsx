@@ -25,6 +25,7 @@ import Image from 'next/image';
 
 function SinglePostCard({ post: initialPost, onDelete }: { post: Post, onDelete: () => void }) {
     const { user, idToken } = useAuth();
+    const router = useRouter();
     const [post, setPost] = React.useState(initialPost);
     const [isLiked, setIsLiked] = React.useState(false);
     const [isDeleting, setIsDeleting] = React.useState(false);
@@ -37,7 +38,10 @@ function SinglePostCard({ post: initialPost, onDelete }: { post: Post, onDelete:
     }, [initialPost, user]);
 
      const handleLike = async () => {
-        if (!idToken || !user) return;
+        if (!idToken || !user) {
+            router.push('/login?redirect=/posts/' + post._id);
+            return;
+        };
 
         const originalPost = { ...post };
         const newIsLiked = !isLiked;
@@ -181,6 +185,7 @@ function CommentCard({ comment }: { comment: Comment }) {
 
 function CommentSection({ postId, onCommentAdded }: { postId: string, onCommentAdded: () => void }) {
     const { user, idToken } = useAuth();
+    const router = useRouter();
     const [comments, setComments] = React.useState<Comment[]>([]);
     const [loading, setLoading] = React.useState(true);
     const [commentText, setCommentText] = React.useState("");
@@ -204,7 +209,11 @@ function CommentSection({ postId, onCommentAdded }: { postId: string, onCommentA
     }, [postId]);
 
     const handlePostComment = async () => {
-        if (!commentText.trim() || !idToken) return;
+        if (!idToken) {
+            router.push('/login?redirect=/posts/' + postId);
+            return;
+        }
+        if (!commentText.trim()) return;
         setPosting(true);
         try {
             const res = await fetch(`/api/posts/${postId}/comments`, {
@@ -227,7 +236,7 @@ function CommentSection({ postId, onCommentAdded }: { postId: string, onCommentA
     return (
         <div className="max-w-3xl mx-auto mt-6">
             <h2 className="text-2xl font-bold mb-4">Comments</h2>
-            {user && (
+            {user ? (
                 <div className="flex gap-3 mb-6">
                     <Avatar>
                         <AvatarImage src={user.avatar} />
@@ -239,6 +248,12 @@ function CommentSection({ postId, onCommentAdded }: { postId: string, onCommentA
                             {posting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
                         </Button>
                     </div>
+                </div>
+            ) : (
+                <div className="text-center bg-secondary border p-4 rounded-md mb-6">
+                    <p>
+                        <a href="/login" className="font-bold underline">Log in</a> or <a href="/signup" className="font-bold underline">sign up</a> to leave a comment.
+                    </p>
                 </div>
             )}
             <div className="space-y-4">
@@ -254,6 +269,7 @@ export default function PostPage() {
   const params = useParams();
   const router = useRouter();
   const postId = params.id as string;
+  const { authLoading } = useAuth();
   const [post, setPost] = React.useState<Post | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -290,7 +306,7 @@ export default function PostPage() {
   }
 
   const renderContent = () => {
-    if (loading) {
+    if (loading || authLoading) {
         return <div className="flex-1 flex items-center justify-center"><Loader2 className="h-10 w-10 animate-spin" /></div>;
     }
     if (error) {
@@ -309,7 +325,7 @@ export default function PostPage() {
                 <header className="hidden md:flex h-16 items-center border-b bg-card px-4 md:px-6">
                     <h1 className="text-2xl font-bold">Post Details</h1>
                 </header>
-                <main className="flex-1 p-4 md:p-6 lg:p-8">
+                <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-y-auto">
                     <SinglePostCard post={post} onDelete={handlePostDeleted}/>
                     <CommentSection postId={postId} onCommentAdded={handlePostUpdate}/>
                 </main>
@@ -322,7 +338,7 @@ export default function PostPage() {
   return (
     <div className="flex min-h-screen bg-background">
       <AppSidebar />
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col h-screen overflow-hidden">
         <MobileNav />
         {renderContent()}
       </div>
