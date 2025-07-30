@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
@@ -7,10 +8,9 @@ import Link from 'next/link';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { MobileNav } from '@/components/layout/MobileNav';
 import { NeoCard, NeoCardContent, NeoCardFooter, NeoCardHeader } from '@/components/NeoCard';
-import { NeoButton } from '@/components/NeoButton';
+import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
 import { ThumbsUp, MessageCircle, Link as LinkIcon, Users, BookOpen, Search, Share2, MoreVertical, Trash2, Copy, Loader2, User as UserIcon, Megaphone, Github } from 'lucide-react';
 import type { Post, User } from '@/lib/types';
 import { Input } from '@/components/ui/input';
@@ -41,6 +41,7 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel"
+import { NeoButton } from '@/components/NeoButton';
 
 function CreatePost({ onAddPost }: { onAddPost: (newPost: Post) => void }) {
   const [postContent, setPostContent] = useState('');
@@ -60,7 +61,7 @@ function CreatePost({ onAddPost }: { onAddPost: (newPost: Post) => void }) {
          const url = new URL(githubLink);
          const path = url.pathname.split('/').filter(Boolean);
          if (path.length >= 2) {
-             const stackblitzUrl = `https://stackblitz.com/github/${path[0]}/${path[1]}`;
+             const stackblitzUrl = `https://stackblitz.com/github/${path[0]}/${path[1]}?embed=1&view=preview`;
              payload.resourceLink = stackblitzUrl;
          } else {
              throw new Error("Invalid GitHub repository URL.")
@@ -325,7 +326,7 @@ function PostCard({ post: initialPost, currentUser, onDelete }: { post: Post; cu
         <p className="whitespace-pre-wrap">{post.content}</p>
         {post.resourceLink && (
             post.resourceLink.includes('stackblitz.com') ? (
-                <div className="mt-4 w-full aspect-video border rounded-md overflow-hidden">
+                <div className="mt-4 w-full aspect-[4/3] border rounded-md overflow-hidden">
                     <iframe 
                       src={post.resourceLink} 
                       className="w-full h-full" 

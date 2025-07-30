@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -116,7 +117,7 @@ function SinglePostCard({ post: initialPost, onDelete }: { post: Post, onDelete:
                                 <MoreVertical className="h-5 w-5" />
                             </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="border-2 border-foreground shadow-[4px_4px_0px_hsl(var(--foreground))]">
+                        <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={handleDelete} className="text-destructive focus:bg-destructive/10 focus:text-destructive" disabled={isDeleting}>
                                 {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Trash2 className="mr-2 h-4 w-4"/>}
                                 <span>Delete Post</span>
@@ -130,11 +131,17 @@ function SinglePostCard({ post: initialPost, onDelete }: { post: Post, onDelete:
             <p className="whitespace-pre-wrap text-lg">{post.content}</p>
             {post.resourceLink && (
                  post.resourceLink.includes('stackblitz.com') ? (
-                    <div className="mt-4 w-full aspect-video border rounded-md overflow-hidden">
-                        <iframe src={post.resourceLink} className="w-full h-full" title="StackBlitz Code Embed"></iframe>
+                    <div className="mt-4 w-full aspect-[4/3] border rounded-md overflow-hidden">
+                        <iframe 
+                            src={post.resourceLink} 
+                            className="w-full h-full" 
+                            title="StackBlitz Code Embed"
+                            allow="accelerometer; ambient-light-sensor; camera; encrypted-media; geolocation; gyroscope; hid; microphone; midi; payment; usb; vr; xr-spatial-tracking"
+                            sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts"
+                        ></iframe>
                     </div>
                 ) : (
-                    <a href={post.resourceLink} target="_blank" rel="noopener noreferrer" className="mt-4 flex items-center gap-3 p-3 bg-secondary rounded-md border-2 border-foreground hover:bg-primary/20">
+                    <a href={post.resourceLink} target="_blank" rel="noopener noreferrer" className="mt-4 flex items-center gap-3 p-3 bg-secondary rounded-md border hover:bg-primary/20">
                         <LinkIcon className="h-5 w-5 flex-shrink-0" />
                         <span className="truncate text-sm font-medium">{post.resourceLink}</span>
                     </a>
