@@ -5,15 +5,15 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const neoButtonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-bold ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border-2",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
+        default: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-[2px_2px_0px_hsl(var(--border))] active:shadow-none active:translate-x-[2px] active:translate-y-[2px]",
+        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80 shadow-[2px_2px_0px_hsl(var(--border))] active:shadow-none active:translate-x-[2px] active:translate-y-[2px]",
+        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-[2px_2px_0px_hsl(var(--border))] active:shadow-none active:translate-x-[2px] active:translate-y-[2px]",
+        ghost: "border-transparent hover:bg-accent hover:text-accent-foreground",
+        link: "text-primary underline-offset-4 hover:underline border-transparent",
       },
       size: {
         default: "h-10 px-4 py-2",

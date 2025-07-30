@@ -49,7 +49,7 @@ function ConversationList({ conversations, loading, currentUserId }: { conversat
     }
 
     return (
-        <nav className="divide-y-2 divide-foreground border-r-2 border-foreground">
+        <nav className="divide-y-2 divide-border">
            {conversations.map(convo => {
                if (!convo.participant) return null; // Skip convos without participant data
 
@@ -107,23 +107,11 @@ export default function MessagesPage() {
         }
     }, [idToken]);
 
-    // This merges the unread counts from the context into the main conversation list
-    useEffect(() => {
-        setConversations(prevConvos => {
-            const unreadMap = new Map(unreadConversations.map(c => [c._id?.toString(), c.unreadCount]));
-            return prevConvos.map(convo => ({
-                ...convo,
-                unreadCount: unreadMap.get(convo._id?.toString()) || 0,
-            }));
-        });
-    }, [unreadConversations]);
-
-
     useEffect(() => {
         const recipientId = searchParams.get('recipient');
 
-        const startOrSelectConversation = async () => {
-            if (recipientId && idToken && user && recipientId !== user.id) {
+        const handleStartConversation = async () => {
+             if (recipientId && idToken && user && recipientId !== user.id) {
                 setLoadingConvos(true);
                 try {
                     const res = await fetch('/api/messages', {
@@ -139,21 +127,23 @@ export default function MessagesPage() {
                     router.replace(`/messages/${data.conversationId}`); // Go to the chat page
                 } catch (error) {
                      toast({ variant: 'destructive', title: 'Error', description: 'Could not start conversation.' });
-                     fetchConversations(); // Fetch conversations normally if starting one fails
+                     fetchConversations();
                 } 
-            } else {
-                 fetchConversations();
             }
         };
 
         if(!authLoading && idToken) {
-            startOrSelectConversation();
+            if (recipientId) {
+                handleStartConversation();
+            } else {
+                fetchConversations();
+            }
             fetchUnreadCount();
         }
 
-    }, [searchParams, idToken, fetchConversations, authLoading, user, router, fetchUnreadCount]);
+    }, [searchParams, idToken, user, authLoading, router, fetchUnreadCount, fetchConversations]);
 
-    if (authLoading || (loadingConvos && conversations.length === 0 && !searchParams.get('recipient'))) {
+    if (authLoading || loadingConvos) {
         return (
              <div className="flex min-h-screen bg-background">
                 <AppSidebar />
@@ -169,7 +159,7 @@ export default function MessagesPage() {
             <AppSidebar />
             <div className="flex-1 flex flex-col pb-16 md:pb-0">
                 <MobileNav pageTitle="Messages" />
-                 <header className="hidden md:flex h-16 items-center border-b-2 border-foreground bg-card px-4 md:px-6">
+                 <header className="hidden md:flex h-16 items-center border-b-2 bg-card px-4 md:px-6">
                     <h1 className="text-2xl font-headline font-bold">Messages</h1>
                 </header>
                 <main className="flex-1 overflow-y-auto">
@@ -179,5 +169,3 @@ export default function MessagesPage() {
         </div>
     );
 }
-
-    
