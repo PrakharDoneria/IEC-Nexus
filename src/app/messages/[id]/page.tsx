@@ -34,6 +34,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useRealtime } from "@/hooks/useRealtime";
 
 const MAX_IMAGE_SIZE_MB = 5;
 
@@ -92,6 +93,7 @@ export default function ChatPage() {
     const router = useRouter();
     const conversationId = params.id as string;
     const { fetchUnreadCount } = useUnreadCount();
+    const { addListener } = useRealtime();
     
     const [messages, setMessages] = useState<Message[]>([]);
     const [participant, setParticipant] = useState<User | null>(null);
@@ -110,13 +112,13 @@ export default function ChatPage() {
     const isFetching = useRef(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const fetchMessages = useCallback(async (cursor?: string | null, preventLoading = false) => {
-        if (isFetching.current) return;
+    const fetchMessages = useCallback(async (cursor?: string | null) => {
+        if (isFetching.current && !cursor) return; // Allow loading more even if a fetch is in progress
         isFetching.current = true;
         
         if (cursor) {
             setLoadingMore(true);
-        } else if (!messages.length && !preventLoading) { 
+        } else if (!messages.length) { 
             setLoading(true);
         }
         
@@ -139,9 +141,12 @@ export default function ChatPage() {
                 fetchUnreadCount(); 
             }
             
+            // Smart scroll positioning
             if (cursor && chatContainerRef.current && prevScrollHeight) {
+                // Keep scroll position stable when loading older messages
                 chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight - prevScrollHeight;
-            } else {
+            } else if (!cursor) {
+                // Scroll to bottom on initial load or when a new message is sent/received
                  setTimeout(() => {
                     if (chatContainerRef.current) {
                         chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
@@ -160,12 +165,19 @@ export default function ChatPage() {
     }, [conversationId, idToken, router, fetchUnreadCount, participant, messages.length]);
 
 
-    // Real-time polling for new messages
+    // Real-time listener
+    useEffect(() => {
+       const unsubscribe = addListener(`conversation:${conversationId}`, () => {
+         fetchMessages();
+       });
+       return unsubscribe;
+    }, [addListener, conversationId, fetchMessages]);
+
+
+    // Initial fetch
     useEffect(() => {
         if (conversationId && idToken) {
             fetchMessages(); 
-            const intervalId = setInterval(() => fetchMessages(null, true), 5000); // Poll every 5 seconds
-            return () => clearInterval(intervalId); // Cleanup
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [conversationId, idToken]);
@@ -206,7 +218,7 @@ export default function ChatPage() {
                     body: JSON.stringify({ content: newMessage })
                 });
                  if (!res.ok) throw new Error("Failed to edit message");
-                 await fetchMessages(null, true);
+                 await fetchMessages();
                  toast({ title: "Message Edited" });
             } catch (error) {
                  toast({ variant: 'destructive', title: 'Error', description: 'Could not edit message.'});
@@ -228,7 +240,7 @@ export default function ChatPage() {
             setNewMessage("");
             setImageData(null);
             setImagePreview(null);
-            await fetchMessages(null, true);
+            await fetchMessages();
         } catch (error) {
              toast({ variant: 'destructive', title: 'Error', description: 'Could not send message.'});
         } finally {
@@ -250,7 +262,7 @@ export default function ChatPage() {
                     method: 'DELETE', headers: { 'Authorization': `Bearer ${idToken}` }
                 });
                 if (!res.ok) throw new Error("Failed to delete message");
-                await fetchMessages(null, true);
+                await fetchMessages();
                 toast({ title: "Message Deleted" });
             } catch (error) {
                  toast({ variant: 'destructive', title: 'Error', description: 'Could not delete message.'});

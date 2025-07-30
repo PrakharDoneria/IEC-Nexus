@@ -46,11 +46,7 @@ export async function GET(req: NextRequest, { params }: { params: { conversation
     
     const query: any = { conversationId };
     if (cursor && ObjectId.isValid(cursor)) {
-        // When using a cursor, we are fetching messages older than the cursor's timestamp
-        const cursorMessage = await db.collection('messages').findOne({ _id: new ObjectId(cursor) });
-        if (cursorMessage) {
-            query.timestamp = { $lt: cursorMessage.timestamp };
-        }
+        query._id = { $lt: new ObjectId(cursor) };
     }
 
     const messages = await db.collection('messages')

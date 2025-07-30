@@ -7,7 +7,7 @@ import { MobileNav } from "@/components/layout/MobileNav";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Conversation } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { MessagesSquare, Loader2 } from "lucide-react";
+import { MessagesSquare, Loader2, MoreVertical, Trash2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { format, formatDistanceToNow, isToday, isYesterday } from "date-fns";
 import { toast } from "@/hooks/use-toast";
@@ -15,6 +15,23 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useUnreadCount } from "@/hooks/useUnreadCount";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 function formatTimestamp(timestamp: Date | string) {
     const date = new Date(timestamp);
@@ -27,7 +44,32 @@ function formatTimestamp(timestamp: Date | string) {
     return format(date, 'P'); // e.g., 04/10/2024
 }
 
-function ConversationList({ conversations, loading, currentUserId }: { conversations: Conversation[], loading: boolean, currentUserId?: string | null }) {
+function ConversationList({ conversations, loading, onDeleteConversation }: { conversations: Conversation[], loading: boolean, onDeleteConversation: (convoId: string) => void }) {
+    const { idToken } = useAuth();
+    const [deletingId, setDeletingId] = useState<string | null>(null);
+
+    const handleDelete = async (convoId: string) => {
+        setDeletingId(convoId);
+        try {
+            if (!idToken) throw new Error("Authentication required");
+            const res = await fetch(`/api/messages/${convoId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${idToken}` }
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message || 'Failed to delete conversation');
+            
+            toast({ title: 'Conversation Deleted', description: 'The chat has been removed.' });
+            onDeleteConversation(convoId);
+
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Error', description: error.message });
+        } finally {
+            setDeletingId(null);
+        }
+    }
+
+
     if (loading) {
         return (
             <div className="flex flex-col items-center justify-center h-full">
@@ -51,25 +93,60 @@ function ConversationList({ conversations, loading, currentUserId }: { conversat
     return (
         <nav className="divide-y">
            {conversations.map(convo => {
-               if (!convo.participant) return null; // Skip convos without participant data
+               if (!convo.participant || !convo._id) return null; // Skip convos without participant data
 
                const isUnread = (convo.unreadCount || 0) > 0;
 
                return (
-                 <Link key={convo._id?.toString()} href={`/messages/${convo._id!.toString()}`} className="w-full flex items-center gap-3 p-3 text-left hover:bg-secondary">
-                     <Avatar>
-                         <AvatarImage src={convo.participant?.avatar} />
-                         <AvatarFallback>{convo.participant?.name.charAt(0)}</AvatarFallback>
-                     </Avatar>
-                     <div className="flex-1 overflow-hidden">
-                         <div className="flex justify-between items-baseline">
-                           <p className={cn("truncate", isUnread ? "font-bold" : "font-semibold")}>{convo.participant?.name}</p>
-                           {convo.lastMessage?.timestamp && <span className="text-xs text-muted-foreground whitespace-nowrap">{formatTimestamp(convo.lastMessage.timestamp)}</span>}
-                         </div>
-                         <p className={cn("text-sm truncate", isUnread ? "text-foreground font-medium" : "text-muted-foreground")}>{convo.lastMessage?.content || '...'}</p>
-                     </div>
-                     {isUnread && <Badge variant="destructive" className="h-5">{convo.unreadCount}</Badge>}
-                 </Link>
+                <div key={convo._id.toString()} className="flex items-center gap-1 p-3 hover:bg-secondary group">
+                    <Link href={`/messages/${convo._id.toString()}`} className="w-full flex items-center gap-3 text-left">
+                        <Avatar>
+                            <AvatarImage src={convo.participant?.avatar} />
+                            <AvatarFallback>{convo.participant?.name.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 overflow-hidden">
+                            <div className="flex justify-between items-baseline">
+                                <p className={cn("truncate", isUnread ? "font-bold" : "font-semibold")}>{convo.participant?.name}</p>
+                                {convo.lastMessage?.timestamp && <span className="text-xs text-muted-foreground whitespace-nowrap">{formatTimestamp(convo.lastMessage.timestamp)}</span>}
+                            </div>
+                            <p className={cn("text-sm truncate", isUnread ? "text-foreground font-medium" : "text-muted-foreground")}>{convo.lastMessage?.content || '...'}</p>
+                        </div>
+                        {isUnread && <Badge variant="destructive" className="h-5">{convo.unreadCount}</Badge>}
+                    </Link>
+
+                    <AlertDialog>
+                         <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <MoreVertical className="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <AlertDialogTrigger asChild>
+                                    <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={(e) => e.preventDefault()}>
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        <span>Delete Chat</span>
+                                    </DropdownMenuItem>
+                                </AlertDialogTrigger>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                        <AlertDialogContent>
+                             <AlertDialogHeader>
+                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    This action will permanently delete your entire conversation with <strong>{convo.participant.name}</strong>. This cannot be undone.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDelete(convo._id!.toString())} className="bg-destructive text-destructive-foreground hover:bg-destructive/90" disabled={deletingId === convo._id.toString()}>
+                                    {deletingId === convo._id.toString() && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                                    Delete
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                </div>
                )
             })}
         </nav>
@@ -83,7 +160,7 @@ export default function MessagesPage() {
     const router = useRouter();
     const [conversations, setConversations] = useState<Conversation[]>([]);
     const [loadingConvos, setLoadingConvos] = useState(true);
-    const { conversations: unreadConversations, fetchUnreadCount } = useUnreadCount();
+    const { fetchUnreadCount } = useUnreadCount();
 
     const isFetchingConvos = useRef(false);
 
@@ -143,6 +220,11 @@ export default function MessagesPage() {
 
     }, [searchParams, idToken, user, authLoading, router, fetchUnreadCount, fetchConversations]);
 
+    const handleDeleteConversation = (convoId: string) => {
+        setConversations(prev => prev.filter(c => c._id!.toString() !== convoId));
+    };
+
+
     if (authLoading || loadingConvos) {
         return (
              <div className="flex min-h-screen bg-background">
@@ -163,7 +245,7 @@ export default function MessagesPage() {
                     <h1 className="text-2xl font-bold">Messages</h1>
                 </header>
                 <main className="flex-1 overflow-y-auto">
-                    <ConversationList conversations={conversations} loading={loadingConvos} currentUserId={user?.id} />
+                    <ConversationList conversations={conversations} loading={loadingConvos} onDeleteConversation={handleDeleteConversation} />
                 </main>
             </div>
         </div>
