@@ -326,7 +326,13 @@ function PostCard({ post: initialPost, currentUser, onDelete }: { post: Post; cu
         {post.resourceLink && (
             post.resourceLink.includes('stackblitz.com') ? (
                 <div className="mt-4 w-full aspect-video border rounded-md overflow-hidden">
-                    <iframe src={post.resourceLink} className="w-full h-full" title="StackBlitz Code Embed"></iframe>
+                    <iframe 
+                      src={post.resourceLink} 
+                      className="w-full h-full" 
+                      title="StackBlitz Code Embed"
+                      allow="accelerometer; ambient-light-sensor; camera; encrypted-media; geolocation; gyroscope; hid; microphone; midi; payment; usb; vr; xr-spatial-tracking"
+                      sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts"
+                    ></iframe>
                 </div>
             ) : (
                 <a href={post.resourceLink} target="_blank" rel="noopener noreferrer" className="mt-4 flex items-center gap-3 p-3 bg-secondary rounded-md border hover:bg-primary/20">
