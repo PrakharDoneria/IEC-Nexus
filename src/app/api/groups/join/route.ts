@@ -28,24 +28,6 @@ export async function POST(req: NextRequest) {
     const group = await db.collection('groups').findOne({ inviteCode });
 
     if (!group) {
-        // Find group by ID (if an ObjectId is passed)
-        if (ObjectId.isValid(inviteCode)) {
-            const groupById = await db.collection('groups').findOne({ _id: new ObjectId(inviteCode) });
-             if (!groupById) {
-                return NextResponse.json({ message: 'Invalid invite code or group ID' }, { status: 404 });
-            }
-            // Add user to the group's members array if they aren't already in it
-            const resultById = await db.collection('groups').updateOne(
-                { _id: groupById._id },
-                { $addToSet: { members: userId } }
-            );
-
-            if (resultById.modifiedCount === 0) {
-                return NextResponse.json({ message: 'You are already a member of this group', groupId: groupById._id }, { status: 200 });
-            }
-
-            return NextResponse.json({ message: 'Successfully joined group', groupId: groupById._id }, { status: 200 });
-        }
         return NextResponse.json({ message: 'Invalid invite code' }, { status: 404 });
     }
 
