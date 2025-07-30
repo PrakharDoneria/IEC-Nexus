@@ -5,6 +5,9 @@ import React, { createContext, useContext, useEffect, useState, useCallback, use
 import { useAuth } from './useAuth';
 import type { Conversation } from '@/lib/types';
 import { usePathname } from 'next/navigation';
+import { getMessaging, onMessage } from 'firebase/messaging';
+import app from '@/lib/firebase';
+import { toast } from './use-toast';
 
 interface UnreadCountContextType {
   conversations: Conversation[];
@@ -42,11 +45,27 @@ export const UnreadCountProvider: React.FC<{ children: React.ReactNode }> = ({ c
   }, [idToken]);
 
   useEffect(() => {
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+        const messaging = getMessaging(app);
+        const unsubscribe = onMessage(messaging, (payload) => {
+            console.log('Message received in foreground. ', payload);
+            toast({
+                title: payload.notification?.title,
+                description: payload.notification?.body,
+            });
+            // When a notification comes in, refetch the conversation list
+            // to update unread counts and last messages in real-time.
+            fetchUnreadCount();
+        });
+        return () => {
+            unsubscribe();
+        };
+    }
+  }, [fetchUnreadCount]);
+
+  useEffect(() => {
     if (!authLoading && idToken) {
       fetchUnreadCount(); // Initial fetch
-      // Polling is removed to reduce server load. Data will be refetched on navigation or action.
-      // const interval = setInterval(fetchUnreadCount, 30000);
-      // return () => clearInterval(interval);
     }
   }, [authLoading, idToken, fetchUnreadCount]);
   
@@ -75,5 +94,3 @@ export const useUnreadCount = () => {
   }
   return context;
 };
-
-    

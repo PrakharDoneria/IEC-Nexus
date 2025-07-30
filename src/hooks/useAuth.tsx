@@ -4,13 +4,12 @@
 import * as React from 'react';
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { getAuth, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { getMessaging, getToken, onMessage } from "firebase/messaging";
+import { getMessaging, getToken } from "firebase/messaging";
 import app from '@/lib/firebase';
 import type { User } from '@/lib/types';
 import { useRouter, usePathname } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { toast } from './use-toast';
-import { useUnreadCount } from './useUnreadCount';
 
 interface AuthContextType {
   user: User | null;
@@ -91,24 +90,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [fetchUserProfile]);
 
-
-  useEffect(() => {
-    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-        const messaging = getMessaging(app);
-        // This listener handles incoming messages when the app is in the foreground
-        const unsubscribe = onMessage(messaging, (payload) => {
-            console.log('Message received. ', payload);
-            toast({
-                title: payload.notification?.title,
-                description: payload.notification?.body,
-            });
-            // The useUnreadCount hook will handle polling for updates
-        });
-        return () => {
-            unsubscribe();
-        };
-    }
-  }, []);
 
   useEffect(() => {
     const auth = getAuth(app);
