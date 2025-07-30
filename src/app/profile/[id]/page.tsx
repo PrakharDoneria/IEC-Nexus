@@ -21,16 +21,14 @@ import { NeoCard, NeoCardContent, NeoCardHeader } from "@/components/NeoCard";
 function ProfilePostCard({ post }: { post: Post }) {
   return (
     <NeoCard>
-        <NeoCardHeader>
-             <div className="flex items-center gap-3">
-                 <Avatar className="h-11 w-11">
-                    <AvatarImage src={post.author.avatar} data-ai-hint="user avatar" />
-                    <AvatarFallback>{post.author.name.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-bold">{post.author.name}</p>
-                    <p className="text-sm text-muted-foreground">{formatDistanceToNow(new Date(post.timestamp), { addSuffix: true })}</p>
-                  </div>
+        <NeoCardHeader className="flex flex-row items-center gap-3">
+             <Avatar className="h-11 w-11">
+                <AvatarImage src={post.author.avatar} data-ai-hint="user avatar" />
+                <AvatarFallback>{post.author.name.charAt(0)}</AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="font-bold">{post.author.name}</p>
+                <p className="text-sm text-muted-foreground">{formatDistanceToNow(new Date(post.timestamp), { addSuffix: true })}</p>
               </div>
         </NeoCardHeader>
       <NeoCardContent>
@@ -299,30 +297,28 @@ export default function ProfilePage() {
         <MobileNav />
         <main className="flex-1">
           <div className="w-full bg-card">
-            <div className="h-32 sm:h-48 bg-secondary relative">
+            <div className="h-48 sm:h-64 bg-secondary relative">
                 <Image
                     src={profileUser.bannerImage || 'https://placehold.co/1200x300.png'}
                     alt="Cover image"
-                    width={1200}
-                    height={300}
-                    className="w-full h-full object-cover"
+                    fill
+                    className="object-cover"
                     data-ai-hint="header abstract"
+                    priority
                 />
             </div>
             <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="-mt-12 sm:-mt-16 sm:flex sm:items-end sm:space-x-5">
-                    <div className="flex">
-                        <Avatar className="h-24 w-24 sm:h-32 sm:w-32 ring-4 ring-card border-2 border-foreground">
-                           <AvatarImage src={profileUser.avatar} data-ai-hint="user avatar" />
-                           <AvatarFallback className="text-4xl">{profileUser.name.slice(0,2)}</AvatarFallback>
-                        </Avatar>
-                    </div>
-                    <div className="mt-6 sm:flex-1 sm:min-w-0 sm:flex sm:items-center sm:justify-end sm:space-x-6 sm:pb-1">
-                        <div className="sm:hidden 2xl:block mt-6 min-w-0 flex-1">
-                            <h1 className="text-2xl font-bold text-foreground truncate">{profileUser.name}</h1>
-                            <p className="text-sm text-muted-foreground">@{profileUser.name.toLowerCase().replace(' ', '').replace('.', '')}</p>
-                        </div>
-                        <div className="mt-6 flex flex-col justify-stretch space-y-3 sm:flex-row sm:space-y-0 sm:space-x-4">
+                <div className="-mt-16 sm:-mt-20 flex items-end space-x-5">
+                    <Avatar className="h-32 w-32 sm:h-40 sm:w-40 ring-4 ring-card border-2 border-foreground">
+                        <AvatarImage src={profileUser.avatar} data-ai-hint="user avatar" />
+                        <AvatarFallback className="text-5xl">{profileUser.name.slice(0,2)}</AvatarFallback>
+                    </Avatar>
+                     <div className="pb-4 flex-1 flex items-center justify-between">
+                         <div>
+                            <h1 className="text-2xl sm:text-3xl font-bold text-foreground truncate">{profileUser.name}</h1>
+                            <p className="text-sm sm:text-base text-muted-foreground">@{profileUser.name.toLowerCase().replace(' ', '').replace('.', '')}</p>
+                         </div>
+                        <div className="flex items-center space-x-4">
                             {isOwnProfile ? (
                               <Button asChild>
                                  <Link href="/settings/profile"><Edit className="mr-2 h-4 w-4"/> Edit Profile</Link>
@@ -339,10 +335,6 @@ export default function ProfilePage() {
                         </div>
                     </div>
                 </div>
-                 <div className="hidden sm:block 2xl:hidden mt-6 min-w-0 flex-1">
-                    <h1 className="text-2xl font-bold text-foreground truncate">{profileUser.name}</h1>
-                    <p className="text-sm text-muted-foreground">@{profileUser.name.toLowerCase().replace(' ', '').replace('.', '')}</p>
-                </div>
             </div>
           </div>
           {/* Main Content */}
@@ -353,25 +345,27 @@ export default function ProfilePage() {
                     <NeoCardHeader>
                         <h2 className="font-bold text-xl">About</h2>
                     </NeoCardHeader>
-                    <NeoCardContent className="space-y-3 text-sm">
+                    <NeoCardContent className="space-y-4 text-sm">
                        <p>{profileUser.bio || "At IEC"}</p>
-                       <div className="flex items-center gap-3 pt-2">
-                            <Mail className="h-4 w-4 text-muted-foreground"/>
-                            <span className="text-muted-foreground">{profileUser.email}</span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            {profileUser.role === 'Faculty' ? (
-                                <Briefcase className="h-4 w-4 text-muted-foreground"/>
-                            ) : (
-                                <GraduationCap className="h-4 w-4 text-muted-foreground"/>
-                            )}
-                            <span className="text-muted-foreground">{profileUser.role}</span>
-                        </div>
-                         <div className="flex items-center gap-3">
-                            <Award className="h-4 w-4 text-muted-foreground"/>
-                            <span className="text-muted-foreground">{profileUser.score || 0} Points</span>
-                        </div>
-                         <div className="flex gap-4 pt-2">
+                       <div className="flex flex-col space-y-3 pt-2">
+                            <div className="flex items-center gap-3">
+                                <Mail className="h-4 w-4 text-muted-foreground"/>
+                                <span className="text-muted-foreground">{profileUser.email}</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                {profileUser.role === 'Faculty' ? (
+                                    <Briefcase className="h-4 w-4 text-muted-foreground"/>
+                                ) : (
+                                    <GraduationCap className="h-4 w-4 text-muted-foreground"/>
+                                )}
+                                <span className="text-muted-foreground">{profileUser.role}</span>
+                            </div>
+                             <div className="flex items-center gap-3">
+                                <Award className="h-4 w-4 text-muted-foreground"/>
+                                <span className="text-muted-foreground">{profileUser.score || 0} Points</span>
+                            </div>
+                       </div>
+                         <div className="flex gap-4 pt-2 border-t mt-4">
                             <Dialog>
                                 <DialogTrigger asChild>
                                     <button className="hover:underline">

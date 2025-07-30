@@ -136,11 +136,11 @@ export default function EditProfilePage() {
       <AppSidebar />
       <div className="flex-1 flex flex-col">
         <MobileNav />
-        <header className="hidden md:flex h-16 items-center border-b-2 border-foreground bg-card px-4 md:px-6">
+        <header className="hidden md:flex h-16 items-center border-b bg-card px-4 md:px-6">
           <h1 className="text-2xl font-headline font-bold">Edit Profile</h1>
         </header>
         <main className="flex-1 p-4 md:p-6 lg:p-8 flex justify-center">
-          <div className="w-full max-w-2xl">
+          <div className="w-full max-w-3xl">
             <form onSubmit={handleSubmit}>
               <NeoCard>
                 <NeoCardHeader>
@@ -149,10 +149,10 @@ export default function EditProfilePage() {
                     This information will be visible to others on the platform.
                   </p>
                 </NeoCardHeader>
-                <NeoCardContent className="space-y-6">
+                <NeoCardContent className="space-y-8 p-6">
                    <div className="space-y-2">
                         <Label>Banner Image</Label>
-                        <div className="w-full aspect-[3/1] bg-secondary rounded-md overflow-hidden relative">
+                        <div className="w-full aspect-[16/5] bg-secondary rounded-lg overflow-hidden relative">
                              {bannerImage && <Image src={bannerImage} alt="Banner preview" layout="fill" objectFit="cover" />}
                         </div>
                         <div className="flex gap-2">
@@ -169,9 +169,9 @@ export default function EditProfilePage() {
                   <div className="space-y-2">
                     <Label>Profile Picture</Label>
                     <div className="flex items-center gap-4">
-                      <Avatar className="h-20 w-20">
+                      <Avatar className="h-24 w-24">
                         <AvatarImage src={avatar} data-ai-hint="user avatar" />
-                        <AvatarFallback>{name.charAt(0)}</AvatarFallback>
+                        <AvatarFallback className="text-3xl">{name.charAt(0)}</AvatarFallback>
                       </Avatar>
                       <input 
                         type="file"
