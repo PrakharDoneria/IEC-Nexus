@@ -69,11 +69,44 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     const client = await clientPromise;
     const db = client.db();
 
-    const result = await db.collection('groupMessages').deleteOne({ _id: messageId, groupId, senderId: userId });
-
-    if (result.deletedCount === 0) {
-      return NextResponse.json({ message: 'Message not found or you do not have permission to delete it' }, { status: 404 });
+    const group = await db.collection('groups').findOne({ _id: groupId });
+    if (!group) {
+        return NextResponse.json({ message: 'Group not found' }, { status: 404 });
     }
+    
+    const message = await db.collection('groupMessages').findOne({ _id: messageId, groupId: groupId });
+    if (!message) {
+        return NextResponse.json({ message: 'Message not found' }, { status: 404 });
+    }
+
+    const currentUserMemberInfo = group.members.find((m: any) => m.userId === userId);
+    const isOwnerOrModerator = currentUserMemberInfo && ['owner', 'moderator'].includes(currentUserMemberInfo.role);
+
+    // Allow deletion if the user is the sender OR if the user is a moderator/owner
+    if (message.senderId !== userId && !isOwnerOrModerator) {
+         return NextResponse.json({ message: 'You do not have permission to delete this message' }, { status: 403 });
+    }
+    
+    let deletionReason = "Deleted by sender.";
+    if (isOwnerOrModerator && message.senderId !== userId) {
+        const { reason } = await req.json();
+        deletionReason = reason || "No reason provided.";
+    }
+
+    // Soft delete the message
+    await db.collection('groupMessages').updateOne(
+      { _id: messageId },
+      { 
+        $set: { 
+            content: `This message was deleted by a moderator. Reason: ${deletionReason}`,
+            isDeleted: true, 
+            reactions: [] // Clear reactions
+        },
+        $unset: {
+            isEdited: "" // Remove edited flag if it exists
+        }
+      }
+    );
 
     return NextResponse.json({ message: 'Message deleted successfully' });
 

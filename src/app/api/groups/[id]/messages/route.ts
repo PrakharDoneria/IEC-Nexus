@@ -50,6 +50,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
                     senderId: 1,
                     reactions: 1,
                     isEdited: 1,
+                    isDeleted: 1,
                     sender: {
                         id: '$senderInfo.id',
                         name: '$senderInfo.name',
@@ -112,6 +113,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
             timestamp: new Date(),
             reactions: [],
             isEdited: false,
+            isDeleted: false,
         };
 
         const result = await db.collection('groupMessages').insertOne(newMessage);
@@ -126,6 +128,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
                 senderId: 1,
                 reactions: 1,
                 isEdited: 1,
+                isDeleted: 1,
                 sender: { id: '$senderInfo.id', name: '$senderInfo.name', avatar: '$senderInfo.avatar' }
            }}
         ]).next();

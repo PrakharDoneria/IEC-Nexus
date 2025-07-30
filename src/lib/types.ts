@@ -81,6 +81,7 @@ export type GroupMessage = {
     timestamp: Date;
     reactions?: Reaction[];
     isEdited?: boolean;
+    isDeleted?: boolean;
     sender?: User; // populated
 };
 

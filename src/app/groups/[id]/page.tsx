@@ -48,11 +48,62 @@ import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 
 const MAX_IMAGE_SIZE_MB = 5;
 
-function GroupMessageActions({ message, onAction }: { message: GroupMessage, onAction: (action: 'edit' | 'delete' | 'react') => void }) {
+function ModeratorDeleteDialog({ open, onOpenChange, onConfirm }: { open: boolean, onOpenChange: (open: boolean) => void, onConfirm: (reason: string) => void }) {
+    const [reason, setReason] = React.useState('');
+    const [loading, setLoading] = React.useState(false);
+
+    const handleConfirm = async () => {
+        setLoading(true);
+        await onConfirm(reason);
+        setLoading(false);
+        onOpenChange(false);
+    }
+    
+    return (
+        <AlertDialog open={open} onOpenChange={onOpenChange}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Message</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        As a moderator, you can delete this message. Please provide a brief reason for this action.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <div className="py-4">
+                    <Label htmlFor="delete-reason">Reason for deletion</Label>
+                    <Textarea id="delete-reason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g., Violates community guidelines." />
+                </div>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleConfirm} disabled={loading || !reason.trim()}>
+                        {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                        Confirm Deletion
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    );
+}
+
+function GroupMessageActions({ message, currentUserRole, onAction }: { message: GroupMessage, currentUserRole: string, onAction: (action: 'edit' | 'delete' | 'react', payload?: any) => void }) {
     const { user } = useAuth();
+    const [modDeleteOpen, setModDeleteOpen] = React.useState(false);
     const canPerformAction = message.senderId === user?.id;
+    const canModerate = ['owner', 'moderator'].includes(currentUserRole);
+
+    const handleDeleteClick = () => {
+        if (canModerate && !canPerformAction) {
+            setModDeleteOpen(true);
+        } else {
+            onAction('delete');
+        }
+    }
+    
+    const handleModDeleteConfirm = (reason: string) => {
+        onAction('delete', { reason });
+    }
 
     return (
+        <>
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full">
@@ -65,37 +116,41 @@ function GroupMessageActions({ message, onAction }: { message: GroupMessage, onA
                     <span>React</span>
                 </DropdownMenuItem>
                  {canPerformAction && (
-                    <>
-                        <DropdownMenuItem onClick={() => onAction('edit')}>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            <span>Edit</span>
-                        </DropdownMenuItem>
-                        <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    <span>Delete</span>
-                                </DropdownMenuItem>
-                             </AlertDialogTrigger>
-                             <AlertDialogContent>
-                                <AlertDialogHeader>
-                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                    <AlertDialogDescription>This will permanently delete your message.</AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => onAction('delete')}>Delete</AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                        </AlertDialog>
-                    </>
+                    <DropdownMenuItem onClick={() => onAction('edit')}>
+                        <Pencil className="mr-2 h-4 w-4" />
+                        <span>Edit</span>
+                    </DropdownMenuItem>
+                 )}
+                 {(canPerformAction || canModerate) && (
+                     <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                <span>Delete</span>
+                            </DropdownMenuItem>
+                         </AlertDialogTrigger>
+                         <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                <AlertDialogDescription>This will permanently delete this message.</AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleDeleteClick}>Delete</AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
                  )}
             </DropdownMenuContent>
         </DropdownMenu>
+        {canModerate && !canPerformAction && (
+             <ModeratorDeleteDialog open={modDeleteOpen} onOpenChange={setModDeleteOpen} onConfirm={handleModDeleteConfirm} />
+        )}
+        </>
     )
 }
 
-function ChatTab({ groupId }: { groupId: string }) {
+function ChatTab({ groupId, currentUserRole }: { groupId: string, currentUserRole: string }) {
     const { user, idToken } = useAuth();
     const [messages, setMessages] = React.useState<GroupMessage[]>([]);
     const [newMessage, setNewMessage] = React.useState('');
@@ -111,8 +166,8 @@ function ChatTab({ groupId }: { groupId: string }) {
     }
 
     const fetchMessages = React.useCallback(async () => {
-        if (!idToken || isFetching.current) return;
-        isFetching.current = true;
+        if (!idToken) return;
+        // Don't set isFetching here to allow real-time updates to bypass the lock
         setLoading(true);
         try {
             const res = await fetch(`/api/groups/${groupId}/messages`, {
@@ -125,12 +180,14 @@ function ChatTab({ groupId }: { groupId: string }) {
             toast({ variant: 'destructive', title: 'Error', description: 'Could not load chat messages.' });
         } finally {
             setLoading(false);
-            isFetching.current = false;
         }
     }, [groupId, idToken]);
 
     React.useEffect(() => {
-        fetchMessages();
+        if(!isFetching.current) {
+            isFetching.current = true;
+            fetchMessages().finally(() => { isFetching.current = false; });
+        }
     }, [fetchMessages]);
 
     // Real-time listener for new messages
@@ -138,7 +195,6 @@ function ChatTab({ groupId }: { groupId: string }) {
         if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
         const messaging = getMessaging(app);
         const unsubscribe = onMessage(messaging, (payload) => {
-             // If we get a notification for the current group, refetch messages
             if (payload.data?.link?.includes(`/groups/${groupId}`)) {
                 fetchMessages();
             }
@@ -196,7 +252,7 @@ function ChatTab({ groupId }: { groupId: string }) {
         }
     }
 
-    const handleMessageAction = async (message: GroupMessage, action: 'edit' | 'delete' | 'react') => {
+    const handleMessageAction = async (message: GroupMessage, action: 'edit' | 'delete' | 'react', payload?: any) => {
         if (!idToken || !user) return;
 
         if (action === 'edit') {
@@ -204,17 +260,19 @@ function ChatTab({ groupId }: { groupId: string }) {
             setEditingMessage(message);
             setNewMessage(message.content);
         } else if (action === 'delete') {
-            if (message.senderId !== user?.id) return;
             try {
                 const res = await fetch(`/api/groups/${groupId}/messages/${message._id}`, {
-                    method: 'DELETE', headers: { 'Authorization': `Bearer ${idToken}` }
+                    method: 'DELETE', 
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+                    body: JSON.stringify({ reason: payload?.reason })
                 });
                 if (!res.ok) throw new Error("Failed to delete message");
-                setMessages(prev => prev.filter(m => m._id !== message._id));
+                await fetchMessages(); // Refetch to show the deleted message placeholder
             } catch (error) {
                  toast({ variant: 'destructive', title: 'Error', description: 'Could not delete message.'});
             }
         } else if (action === 'react') {
+            if (message.isDeleted) return;
             const emoji = '👍'; // Hardcoding a thumbs up for now
              try {
                 const res = await fetch(`/api/groups/${groupId}/messages/${message._id}/react`, {
@@ -243,7 +301,7 @@ function ChatTab({ groupId }: { groupId: string }) {
                      const isOwnMessage = msg.senderId === user?.id;
                      return (
                          <div key={msg._id?.toString()} className={cn("flex items-end gap-2 group", isOwnMessage ? "justify-end" : "justify-start")}>
-                            {isOwnMessage && <div className="opacity-0 group-hover:opacity-100 transition-opacity"><GroupMessageActions message={msg} onAction={(action) => handleMessageAction(msg, action)}/></div>}
+                            {isOwnMessage && !msg.isDeleted && <div className="opacity-0 group-hover:opacity-100 transition-opacity"><GroupMessageActions message={msg} currentUserRole={currentUserRole} onAction={(action, payload) => handleMessageAction(msg, action, payload)}/></div>}
                              {!isOwnMessage && (
                                 <Avatar className="h-8 w-8 self-start">
                                     <AvatarImage src={msg.sender?.avatar} />
@@ -251,15 +309,19 @@ function ChatTab({ groupId }: { groupId: string }) {
                                 </Avatar>
                             )}
                              <div className="flex flex-col" style={{ alignItems: isOwnMessage ? 'flex-end' : 'flex-start' }}>
-                                 <div className="flex items-baseline gap-2" style={{ flexDirection: isOwnMessage ? 'row-reverse' : 'row' }}>
-                                    <p className="font-bold text-sm">{msg.sender?.name}</p>
-                                    <p className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(msg.timestamp), { addSuffix: true })}</p>
-                                </div>
+                                 {!msg.isDeleted && (
+                                    <div className="flex items-baseline gap-2" style={{ flexDirection: isOwnMessage ? 'row-reverse' : 'row' }}>
+                                        <p className="font-bold text-sm">{msg.sender?.name}</p>
+                                        <p className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(msg.timestamp), { addSuffix: true })}</p>
+                                    </div>
+                                 )}
                                 <div className={cn(
                                     "max-w-xs md:max-w-md lg:max-w-lg p-1 rounded-xl relative mt-1", 
-                                    isOwnMessage ? "bg-primary text-primary-foreground rounded-br-none" : "bg-card rounded-bl-none"
+                                    isOwnMessage && !msg.isDeleted ? "bg-primary text-primary-foreground rounded-br-none" : "",
+                                    !isOwnMessage && !msg.isDeleted ? "bg-card rounded-bl-none" : "",
+                                    msg.isDeleted ? "bg-transparent" : ""
                                 )}>
-                                    <p className="p-2 whitespace-pre-wrap">{msg.content}</p>
+                                    <p className={cn("p-2 whitespace-pre-wrap", msg.isDeleted && "text-sm italic text-muted-foreground")}>{msg.content}</p>
                                     {msg.isEdited && <p className="text-xs px-2 pb-1 opacity-70">(edited)</p>}
                                     {(msg.reactions?.length || 0) > 0 && (
                                         <div className="absolute -bottom-3 -right-1 bg-secondary border rounded-full px-1.5 py-0.5 text-xs">
@@ -268,7 +330,7 @@ function ChatTab({ groupId }: { groupId: string }) {
                                     )}
                                 </div>
                             </div>
-                            {!isOwnMessage && <div className="opacity-0 group-hover:opacity-100 transition-opacity"><GroupMessageActions message={msg} onAction={(action) => handleMessageAction(msg, action)}/></div>}
+                            {!isOwnMessage && !msg.isDeleted && <div className="opacity-0 group-hover:opacity-100 transition-opacity"><GroupMessageActions message={msg} currentUserRole={currentUserRole} onAction={(action, payload) => handleMessageAction(msg, action, payload)}/></div>}
                         </div>
                      )
                 })}
@@ -799,9 +861,7 @@ export default function GroupPage() {
         setGroup(prev => ({...prev, ...updatedGroup}));
     };
 
-    const myRole = group?.members.find(m => m.userId === user?.id)?.role;
-    const isOwner = myRole === 'owner';
-    const isModerator = myRole === 'moderator';
+    const myRole = group?.members.find(m => m.userId === user?.id)?.role || 'member';
 
     if (loading || authLoading) {
         return (
@@ -856,7 +916,7 @@ export default function GroupPage() {
                             </ScrollArea>
                         </div>
                         <TabsContent value="chat" className="flex-1 flex flex-col mt-0">
-                            <ChatTab groupId={groupId} />
+                            <ChatTab groupId={groupId} currentUserRole={myRole} />
                         </TabsContent>
                         <TabsContent value="announcements" className="mt-0">
                             <AnnouncementsTab groupId={groupId} />
@@ -873,5 +933,3 @@ export default function GroupPage() {
         </div>
     )
 }
-
-    
