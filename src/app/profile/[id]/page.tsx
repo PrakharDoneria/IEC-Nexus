@@ -5,7 +5,7 @@ import * as React from "react";
 import Link from "next/link";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { MobileNav } from "@/components/layout/MobileNav";
-import { NeoCard, NeoCardContent, NeoCardHeader } from "@/components/NeoCard";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { NeoButton } from "@/components/NeoButton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Mail, Briefcase, GraduationCap, UserPlus, UserCheck, ShieldBan, Loader2, Edit, MessageSquare, Award, Link as LinkIcon } from "lucide-react";
@@ -18,6 +18,7 @@ import { toast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import Image from "next/image";
+import { NeoCard, NeoCardContent } from "@/components/NeoCard";
 
 function ProfilePostCard({ post }: { post: Post }) {
   return (
