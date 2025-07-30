@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
@@ -166,14 +165,12 @@ export default function ChatPage() {
     }, [conversationId, idToken, router, fetchUnreadCount, participant, messages.length]);
 
 
-    // Real-time listener
+    // Real-time listener setup
     useEffect(() => {
-       if (!conversationId) return;
-       const unsubscribe = addListener(`conversation:${conversationId}`, () => {
-         fetchMessages();
-       });
-       return unsubscribe;
-    }, [addListener, conversationId, fetchMessages]);
+        if (!conversationId) return;
+        const intervalId = setInterval(() => fetchMessages(undefined), 5000); // Poll every 5 seconds
+        return () => clearInterval(intervalId);
+    }, [conversationId, fetchMessages]);
 
 
     // Initial fetch
