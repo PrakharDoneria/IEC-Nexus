@@ -16,8 +16,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
 import { useParams, useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
-import { getMessaging, onMessage } from 'firebase/messaging';
-import app from '@/lib/firebase';
+import { useRealtime } from "@/hooks/useRealtime";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -94,6 +93,7 @@ export default function ChatPage() {
     const router = useRouter();
     const conversationId = params.id as string;
     const { fetchUnreadCount } = useUnreadCount();
+    const { addListener } = useRealtime();
     
     const [messages, setMessages] = useState<Message[]>([]);
     const [participant, setParticipant] = useState<User | null>(null);
@@ -112,13 +112,13 @@ export default function ChatPage() {
     const isFetching = useRef(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const fetchMessages = useCallback(async (cursor?: string | null) => {
+    const fetchMessages = useCallback(async (cursor?: string | null, preventLoading = false) => {
         if (isFetching.current) return;
         isFetching.current = true;
         
         if (cursor) {
             setLoadingMore(true);
-        } else if (!messages.length) { // only set full loading state if it's the very first fetch
+        } else if (!messages.length && !preventLoading) { // only set full loading state if it's the very first fetch
             setLoading(true);
         }
         
@@ -144,6 +144,10 @@ export default function ChatPage() {
             // Maintain scroll position after prepending new messages
             if (cursor && chatContainerRef.current && prevScrollHeight) {
                 chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight - prevScrollHeight;
+            } else {
+                 setTimeout(() => {
+                    chatContainerRef.current?.scrollTo({ top: chatContainerRef.current.scrollHeight, behavior: preventLoading ? 'smooth' : 'auto' });
+                 }, 100);
             }
 
         } catch (error) {
@@ -156,40 +160,22 @@ export default function ChatPage() {
         }
     }, [conversationId, idToken, router, fetchUnreadCount, participant, messages.length]);
 
+    // Real-time listener for new messages
+    useEffect(() => {
+        const unsubscribe = addListener(`conversation:${conversationId}`, () => {
+            // Fetch messages without showing a loading spinner to make it feel seamless
+            fetchMessages(null, true);
+        });
+
+        return unsubscribe; // Cleanup listener on component unmount
+    }, [addListener, conversationId, fetchMessages]);
+
     useEffect(() => {
         if (conversationId && idToken && !isFetching.current) {
             fetchMessages(); 
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [conversationId, idToken]);
-
-    // Real-time listener for new messages
-    useEffect(() => {
-        if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return () => {};
-        
-        try {
-            const messaging = getMessaging(app);
-            const unsubscribe = onMessage(messaging, (payload) => {
-                // If we get a notification for the current conversation, refetch messages
-                if (payload.data?.link?.includes(`/messages/${conversationId}`)) {
-                    fetchMessages();
-                }
-            });
-
-            return () => unsubscribe();
-        } catch(e) {
-            console.error("Error setting up foreground message listener in Direct Message:", e);
-            return () => {};
-        }
-
-    }, [conversationId, fetchMessages]);
-
-    useEffect(() => {
-        if (!loading && !loadingMore && !hasMore) {
-            // Scroll to bottom on initial load only after the first batch is loaded
-            chatContainerRef.current?.scrollTo({ top: chatContainerRef.current.scrollHeight, behavior: 'auto' });
-        }
-    }, [loading, loadingMore, hasMore]);
 
     const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -420,5 +406,3 @@ export default function ChatPage() {
        </div>
     );
 }
-
-    

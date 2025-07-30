@@ -5,9 +5,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback, use
 import { useAuth } from './useAuth';
 import type { Conversation } from '@/lib/types';
 import { usePathname } from 'next/navigation';
-import { getMessaging, onMessage } from 'firebase/messaging';
-import app from '@/lib/firebase';
-import { toast } from './use-toast';
+import { useRealtime } from './useRealtime';
 
 interface UnreadCountContextType {
   conversations: Conversation[];
@@ -21,6 +19,7 @@ export const UnreadCountProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const { idToken, authLoading } = useAuth();
   const pathname = usePathname();
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const { addListener } = useRealtime();
 
   const fetchUnreadCount = useCallback(async () => {
     if (!idToken) {
@@ -44,32 +43,14 @@ export const UnreadCountProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
   }, [idToken]);
 
+  // Listen for any new message event to refetch the conversation list
   useEffect(() => {
-    if (typeof window !== 'undefined' && 'serviceWorker' in navigator && idToken) {
-        try {
-            const messaging = getMessaging(app);
-            const unsubscribe = onMessage(messaging, (payload) => {
-                console.log('Message received in foreground. ', payload);
-                // Don't show toast if user is already in a chat window, as the message will appear there.
-                if (!pathname.startsWith('/messages/') && !pathname.startsWith('/groups/')) {
-                    toast({
-                        title: payload.notification?.title,
-                        description: payload.notification?.body,
-                    });
-                }
-                
-                // When a notification comes in, refetch the conversation list
-                // to update unread counts and last messages in real-time.
-                fetchUnreadCount();
-            });
-            return () => {
-                unsubscribe();
-            };
-        } catch(e) {
-            console.error("Error setting up foreground message listener:", e);
-        }
-    }
-  }, [fetchUnreadCount, idToken, pathname]);
+    const unsubscribe = addListener('*', () => {
+      fetchUnreadCount();
+    });
+    return unsubscribe;
+  }, [addListener, fetchUnreadCount]);
+
 
   useEffect(() => {
     if (!authLoading && idToken) {
@@ -102,5 +83,3 @@ export const useUnreadCount = () => {
   }
   return context;
 };
-
-    

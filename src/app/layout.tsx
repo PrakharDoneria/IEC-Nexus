@@ -4,6 +4,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 import { AuthProvider } from '@/hooks/useAuth';
 import { UnreadCountProvider } from '@/hooks/useUnreadCount';
+import { RealtimeProvider } from '@/hooks/useRealtime';
 
 export const metadata: Metadata = {
   title: 'IEC Nexus',
@@ -25,7 +26,9 @@ export default function RootLayout({
       <body className="font-body antialiased">
         <AuthProvider>
           <UnreadCountProvider>
-            {children}
+            <RealtimeProvider>
+              {children}
+            </RealtimeProvider>
           </UnreadCountProvider>
         </AuthProvider>
         <Toaster />

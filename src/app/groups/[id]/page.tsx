@@ -18,8 +18,7 @@ import { toast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { formatDistanceToNow } from 'date-fns';
 import { Label } from '@/components/ui/label';
-import { getMessaging, onMessage } from 'firebase/messaging';
-import app from '@/lib/firebase';
+import { useRealtime } from '@/hooks/useRealtime';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -157,6 +156,7 @@ function ChatTab({ groupId, currentUserRole }: { groupId: string, currentUserRol
     const [loading, setLoading] = React.useState(true);
     const [sending, setSending] = React.useState(false);
     const [editingMessage, setEditingMessage] = React.useState<GroupMessage | null>(null);
+    const { addListener } = useRealtime();
 
     const messagesEndRef = React.useRef<HTMLDivElement>(null);
 
@@ -164,8 +164,9 @@ function ChatTab({ groupId, currentUserRole }: { groupId: string, currentUserRol
         messagesEndRef.current?.scrollIntoView({ behavior });
     }
 
-    const fetchMessages = React.useCallback(async () => {
+    const fetchMessages = React.useCallback(async (preventLoading = false) => {
         if (!idToken) return;
+        if (!preventLoading) setLoading(true);
         try {
             const res = await fetch(`/api/groups/${groupId}/messages`, {
                 headers: { 'Authorization': `Bearer ${idToken}` }
@@ -176,39 +177,25 @@ function ChatTab({ groupId, currentUserRole }: { groupId: string, currentUserRol
         } catch (error) {
             toast({ variant: 'destructive', title: 'Error', description: 'Could not load chat messages.' });
         } finally {
-            setLoading(false);
+            if (!preventLoading) setLoading(false);
         }
     }, [groupId, idToken]);
 
+
+    // Real-time listener for new group messages
     React.useEffect(() => {
-        setLoading(true);
+        const unsubscribe = addListener(`group:${groupId}`, () => {
+            fetchMessages(true);
+        });
+        return unsubscribe;
+    }, [addListener, groupId, fetchMessages]);
+
+    React.useEffect(() => {
         fetchMessages();
     }, [fetchMessages]);
-
-    // Real-time listener for new messages
-    React.useEffect(() => {
-        if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return () => {};
-        
-        try {
-            const messaging = getMessaging(app);
-            const unsubscribe = onMessage(messaging, (payload) => {
-                // If we get a notification for the current group, refetch messages
-                if (payload.data?.link?.includes(`/groups/${groupId}`)) {
-                    fetchMessages();
-                }
-            });
-
-            return () => unsubscribe();
-        } catch(e) {
-            console.error("Error setting up foreground message listener in Group Chat:", e);
-            return () => {};
-        }
-    }, [groupId, fetchMessages]);
     
      React.useEffect(() => {
-        if (!loading) {
-             scrollToBottom('auto');
-        }
+        scrollToBottom(loading ? 'auto' : 'smooth');
     }, [messages, loading]);
 
     const handleSendMessage = async (e: React.FormEvent) => {
@@ -242,11 +229,8 @@ function ChatTab({ groupId, currentUserRole }: { groupId: string, currentUserRol
                 body: JSON.stringify({ content: newMessage })
             });
              if (!res.ok) throw new Error('Failed to send message');
-             const sentMessage = await res.json();
-             
-             setMessages(prev => [...prev, sentMessage]);
+             // The real-time listener will handle adding the message, so we just clear the input.
              setNewMessage('');
-             scrollToBottom();
         } catch (error) {
             toast({ variant: 'destructive', title: 'Error', description: 'Could not send message.' });
         } finally {
@@ -269,7 +253,7 @@ function ChatTab({ groupId, currentUserRole }: { groupId: string, currentUserRol
                     body: JSON.stringify({ reason: payload?.reason })
                 });
                 if (!res.ok) throw new Error("Failed to delete message");
-                await fetchMessages(); // Refetch to show the deleted message placeholder
+                // The real-time listener will trigger a refetch
             } catch (error) {
                  toast({ variant: 'destructive', title: 'Error', description: 'Could not delete message.'});
             }
@@ -935,5 +919,3 @@ export default function GroupPage() {
         </div>
     )
 }
-
-    
