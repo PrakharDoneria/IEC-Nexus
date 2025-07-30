@@ -250,7 +250,7 @@ function ChatTab({ groupId, members }: { groupId: string, members: User[] }) {
                 })}
                 <div ref={messagesEndRef} />
             </div>
-             <div className="p-4 border-t bg-card">
+             <div className="p-4 border-t bg-card shrink-0">
                 {editingMessage && (
                     <div className="flex items-center justify-between bg-secondary p-2 rounded-md mb-2 border">
                         <div>
@@ -419,14 +419,6 @@ function SettingsTab({ group, onGroupUpdated }: { group: Group, onGroupUpdated: 
     const [coverImage, setCoverImage] = React.useState(group.coverImage);
     const [coverImageData, setCoverImageData] = React.useState<string | null>(null);
     const fileInputRef = React.useRef<HTMLInputElement>(null);
-    const [inviteLink, setInviteLink] = React.useState('');
-
-    React.useEffect(() => {
-        if (typeof window !== 'undefined') {
-            setInviteLink(`${window.location.origin}/groups/join?code=${group.inviteCode}`);
-        }
-    }, [group.inviteCode]);
-
 
     const handleCoverImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -477,9 +469,9 @@ function SettingsTab({ group, onGroupUpdated }: { group: Group, onGroupUpdated: 
         }
     }
     
-    const copyInviteLink = () => {
-        navigator.clipboard.writeText(inviteLink);
-        toast({ title: 'Copied!', description: 'Invite link copied to clipboard.' });
+    const copyInviteCode = () => {
+        navigator.clipboard.writeText(group.inviteCode);
+        toast({ title: 'Copied!', description: 'Invite code copied to clipboard.' });
     }
 
     const handleDelete = async () => {
@@ -524,10 +516,10 @@ function SettingsTab({ group, onGroupUpdated }: { group: Group, onGroupUpdated: 
                     <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                    <Label>Invite Link</Label>
+                    <Label>Invite Code</Label>
                     <div className="flex gap-2">
-                        <Input value={inviteLink} readOnly className="font-code" />
-                        <Button type="button" variant="secondary" size="icon" onClick={copyInviteLink}><Copy className="h-5 w-5"/></Button>
+                        <Input value={group.inviteCode} readOnly className="font-code" />
+                        <Button type="button" variant="secondary" size="icon" onClick={copyInviteCode}><Copy className="h-5 w-5"/></Button>
                     </div>
                 </div>
                 <div className="flex justify-end">
@@ -636,7 +628,7 @@ export default function GroupPage() {
                     <Button variant="ghost" size="icon" onClick={() => router.push('/groups')}>
                         <ArrowLeft className="h-5 w-5" />
                     </Button>
-                    <Image src={group.coverImage} alt="group cover" width={40} height={40} className="rounded-md object-cover h-10 w-10 border" data-ai-hint="group cover"/>
+                    <Image src={group.coverImage} alt="group cover" width={40} height={40} className="rounded-md object-cover h-10 w-10 border"/>
                     <div>
                         <h1 className="text-xl font-headline font-bold">{group.name}</h1>
                         <p className="text-xs text-muted-foreground">{group.members.length} members</p>

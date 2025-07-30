@@ -4,6 +4,8 @@ import clientPromise from '@/lib/mongodb';
 import { getAuth } from 'firebase-admin/auth';
 import admin from '@/lib/firebase-admin';
 import { ObjectId } from 'mongodb';
+import { sendNotification } from '@/services/notifications';
+import { User } from '@/lib/types';
 
 // Get messages for a group
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
@@ -53,6 +55,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         }
         const decodedToken = await getAuth(admin.app()).verifyIdToken(idToken);
         const senderId = decodedToken.uid;
+        const senderName = decodedToken.name || "A member";
 
         if (!ObjectId.isValid(params.id)) {
             return NextResponse.json({ message: 'Invalid group ID' }, { status: 400 });
@@ -84,7 +87,16 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         const result = await db.collection('groupMessages').insertOne(newMessage);
         const createdMessage = await db.collection('groupMessages').findOne({_id: result.insertedId});
 
-        // TODO: Add push notifications to other group members
+        // Send notifications to all group members except the author
+        const notificationTitle = `New message in ${group.name} from ${senderName}`;
+        const notificationBody = content.substring(0, 100) + (content.length > 100 ? '...' : '');
+        const notificationLink = `/groups/${group._id.toString()}`;
+        
+        const membersToNotify = (group.members as string[]).filter(id => id !== senderId);
+        for (const memberId of membersToNotify) {
+            await sendNotification(memberId, notificationTitle, notificationBody, notificationLink, 'groupMessage');
+        }
+
 
         return NextResponse.json(createdMessage, { status: 201 });
 

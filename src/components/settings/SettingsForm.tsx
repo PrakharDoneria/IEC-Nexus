@@ -18,6 +18,7 @@ const defaultSettings: NotificationSettings = {
   groupInvite: true,
   directMessage: true,
   groupAnnouncement: true,
+  groupMessage: true,
 };
 
 export function SettingsForm() {
@@ -97,7 +98,7 @@ export function SettingsForm() {
             </div>
           </NeoCardHeader>
           <NeoCardContent className="space-y-6">
-            <div className="flex items-center justify-between rounded-lg border-2 border-foreground p-4">
+            <div className="flex items-center justify-between rounded-lg border p-4">
               <Label htmlFor="newFollower" className="font-semibold">
                 New Follower
               </Label>
@@ -107,7 +108,7 @@ export function SettingsForm() {
                 onCheckedChange={() => handleToggle("newFollower")}
               />
             </div>
-            <div className="flex items-center justify-between rounded-lg border-2 border-foreground p-4">
+            <div className="flex items-center justify-between rounded-lg border p-4">
               <Label htmlFor="postLike" className="font-semibold">
                 Post Like
               </Label>
@@ -117,7 +118,7 @@ export function SettingsForm() {
                 onCheckedChange={() => handleToggle("postLike")}
               />
             </div>
-             <div className="flex items-center justify-between rounded-lg border-2 border-foreground p-4">
+             <div className="flex items-center justify-between rounded-lg border p-4">
               <Label htmlFor="postComment" className="font-semibold">
                 Post Comment
               </Label>
@@ -127,7 +128,7 @@ export function SettingsForm() {
                 onCheckedChange={() => handleToggle("postComment")}
               />
             </div>
-             <div className="flex items-center justify-between rounded-lg border-2 border-foreground p-4">
+             <div className="flex items-center justify-between rounded-lg border p-4">
               <Label htmlFor="groupInvite" className="font-semibold">
                 Group Invite
               </Label>
@@ -137,7 +138,7 @@ export function SettingsForm() {
                 onCheckedChange={() => handleToggle("groupInvite")}
               />
             </div>
-             <div className="flex items-center justify-between rounded-lg border-2 border-foreground p-4">
+             <div className="flex items-center justify-between rounded-lg border p-4">
               <Label htmlFor="directMessage" className="font-semibold">
                 Direct Message
               </Label>
@@ -147,7 +148,7 @@ export function SettingsForm() {
                 onCheckedChange={() => handleToggle("directMessage")}
               />
             </div>
-             <div className="flex items-center justify-between rounded-lg border-2 border-foreground p-4">
+             <div className="flex items-center justify-between rounded-lg border p-4">
                 <Label htmlFor="groupAnnouncement" className="font-semibold">
                     Group Announcement
                 </Label>
@@ -155,6 +156,16 @@ export function SettingsForm() {
                     id="groupAnnouncement"
                     checked={settings.groupAnnouncement}
                     onCheckedChange={() => handleToggle("groupAnnouncement")}
+                />
+            </div>
+            <div className="flex items-center justify-between rounded-lg border p-4">
+                <Label htmlFor="groupMessage" className="font-semibold">
+                    Group Message
+                </Label>
+                <Switch
+                    id="groupMessage"
+                    checked={settings.groupMessage}
+                    onCheckedChange={() => handleToggle("groupMessage")}
                 />
             </div>
 

@@ -65,6 +65,18 @@ const validateSolutionFlow = ai.defineFlow(
     outputSchema: ValidateSolutionOutputSchema,
   },
   async (input) => {
+    // Anti-cheat: Check if the solution is just a copy of the description
+    const solutionLength = input.userSolution.length;
+    const descriptionLength = input.challengeDescription.length;
+    if (solutionLength > descriptionLength * 0.8 && input.userSolution.includes(input.challengeDescription.substring(0, 50))) {
+        return {
+            isCorrect: false,
+            feedback: "It looks like you may have pasted the problem description instead of a code solution. Please submit your code to be validated.",
+            pointsAwarded: 0,
+            newScore: 0,
+        };
+    }
+    
     const { output } = await validationPrompt({
         challengeTitle: input.challengeTitle,
         challengeDescription: input.challengeDescription,

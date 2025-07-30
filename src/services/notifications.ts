@@ -28,6 +28,7 @@ export async function sendNotification(userId: string, title: string, body: stri
       groupInvite: true,
       directMessage: true,
       groupAnnouncement: true,
+      groupMessage: true,
       ...user.notificationSettings, // User's settings override defaults
     };
 

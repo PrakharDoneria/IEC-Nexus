@@ -32,7 +32,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { MoreVertical } from 'lucide-react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 
 function GroupCard({ group }: { group: Group }) {
@@ -60,15 +60,6 @@ function JoinGroupDialog({ onGroupJoined, asChild }: { onGroupJoined: (groupId: 
     const [loading, setLoading] = useState(false);
     const [open, setOpen] = useState(false);
     const [code, setCode] = useState("");
-    const searchParams = useSearchParams();
-
-     useEffect(() => {
-        const inviteCode = searchParams.get('code');
-        if (inviteCode) {
-            setCode(inviteCode);
-            setOpen(true);
-        }
-    }, [searchParams]);
 
     const handleJoin = async () => {
         if (!code.trim() || !idToken) return;
