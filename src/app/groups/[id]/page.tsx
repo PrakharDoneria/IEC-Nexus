@@ -206,7 +206,7 @@ function ChatTab({ groupId, currentUserRole }: { groupId: string, currentUserRol
     }, [groupId, fetchMessages]);
     
      React.useEffect(() => {
-        if (messages.length > 0 && !loading) {
+        if (!loading) {
              scrollToBottom('auto');
         }
     }, [messages, loading]);
@@ -935,3 +935,5 @@ export default function GroupPage() {
         </div>
     )
 }
+
+    

@@ -45,23 +45,31 @@ export const UnreadCountProvider: React.FC<{ children: React.ReactNode }> = ({ c
   }, [idToken]);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-        const messaging = getMessaging(app);
-        const unsubscribe = onMessage(messaging, (payload) => {
-            console.log('Message received in foreground. ', payload);
-            toast({
-                title: payload.notification?.title,
-                description: payload.notification?.body,
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator && idToken) {
+        try {
+            const messaging = getMessaging(app);
+            const unsubscribe = onMessage(messaging, (payload) => {
+                console.log('Message received in foreground. ', payload);
+                // Don't show toast if user is already in a chat window, as the message will appear there.
+                if (!pathname.startsWith('/messages/') && !pathname.startsWith('/groups/')) {
+                    toast({
+                        title: payload.notification?.title,
+                        description: payload.notification?.body,
+                    });
+                }
+                
+                // When a notification comes in, refetch the conversation list
+                // to update unread counts and last messages in real-time.
+                fetchUnreadCount();
             });
-            // When a notification comes in, refetch the conversation list
-            // to update unread counts and last messages in real-time.
-            fetchUnreadCount();
-        });
-        return () => {
-            unsubscribe();
-        };
+            return () => {
+                unsubscribe();
+            };
+        } catch(e) {
+            console.error("Error setting up foreground message listener:", e);
+        }
     }
-  }, [fetchUnreadCount]);
+  }, [fetchUnreadCount, idToken, pathname]);
 
   useEffect(() => {
     if (!authLoading && idToken) {
@@ -94,3 +102,5 @@ export const useUnreadCount = () => {
   }
   return context;
 };
+
+    
