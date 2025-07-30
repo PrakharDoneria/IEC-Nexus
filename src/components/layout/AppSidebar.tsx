@@ -103,8 +103,8 @@ export function AppSidebar() {
       "hidden md:flex flex-col border-r bg-card transition-all duration-300 ease-in-out",
       isCollapsed ? "w-20" : "w-64"
     )}>
-      <div className="flex-1 flex flex-col gap-y-4">
-        <header className={cn("flex h-16 items-center border-b px-4", isCollapsed && "justify-center")}>
+      <div className="flex-1 flex flex-col gap-y-4 overflow-y-auto">
+        <header className={cn("flex h-16 shrink-0 items-center border-b px-4", isCollapsed && "justify-center")}>
            <Link href="/feed" className="flex items-center gap-2 font-headline font-semibold">
             <div className="p-2 bg-primary text-primary-foreground rounded-lg">
               <Users className="h-6 w-6" />
@@ -120,40 +120,44 @@ export function AppSidebar() {
         </nav>
       </div>
 
-      <div className="mt-auto p-4 space-y-2 border-t">
-         <div className="px-2 space-y-1">
-             <Link
-                href="/settings"
-                className={cn(
-                    'flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-colors hover:text-foreground hover:bg-secondary',
-                    isSettingsActive && 'bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground',
-                    isCollapsed ? 'justify-center' : ''
-                )}
-                >
-                <Settings className="h-5 w-5" />
-                {!isCollapsed && <span className="font-medium">Settings</span>}
-            </Link>
+      <div className="mt-auto p-2 space-y-2 border-t">
+        <div className={cn("p-2 rounded-lg", !isCollapsed && "border")}>
+          <div className={cn("flex items-center gap-3", isCollapsed ? "justify-center" : "mb-2")}>
+            <Avatar className="h-10 w-10">
+              <AvatarImage src={user?.avatar} alt={user?.name} data-ai-hint="user avatar" />
+              <AvatarFallback>{user?.name?.charAt(0)}</AvatarFallback>
+            </Avatar>
+            {!isCollapsed && user && (
+              <div className="flex-1 overflow-hidden">
+                <p className="font-semibold truncate">{user.name}</p>
+                <p className="text-xs text-muted-foreground">{user.role}</p>
+              </div>
+            )}
+          </div>
+
+          <div className={cn("space-y-1", isCollapsed ? "" : "border-t pt-2 mt-2")}>
+              <Link
+                  href="/settings"
+                  className={cn(
+                      'flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-colors hover:text-foreground hover:bg-secondary',
+                      isSettingsActive && 'bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground',
+                      isCollapsed ? 'justify-center' : ''
+                  )}
+                  >
+                  <Settings className="h-5 w-5" />
+                  {!isCollapsed && <span className="font-medium">Settings</span>}
+              </Link>
+          
+              <Button variant="ghost" size={isCollapsed ? "icon" : "default"} className="w-full justify-start gap-3" onClick={() => setIsCollapsed(!isCollapsed)}>
+                {isCollapsed ? <PanelLeftOpen className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
+                {!isCollapsed && "Collapse"}
+              </Button>
+              <Button variant="ghost" size={isCollapsed ? "icon" : "default"} className="w-full justify-start gap-3" onClick={logout}>
+                  <LogOut className="h-5 w-5" />
+                  {!isCollapsed && "Logout"}
+              </Button>
+          </div>
         </div>
-        <div className={cn("flex items-center gap-3 pt-2", isCollapsed ? "justify-center" : "")}>
-          <Avatar className="h-10 w-10">
-            <AvatarImage src={user?.avatar} alt={user?.name} data-ai-hint="user avatar" />
-            <AvatarFallback>{user?.name?.charAt(0)}</AvatarFallback>
-          </Avatar>
-          {!isCollapsed && user && (
-            <div className="flex-1 overflow-hidden">
-              <p className="font-semibold truncate">{user.name}</p>
-              <p className="text-xs text-muted-foreground">{user.role}</p>
-            </div>
-          )}
-        </div>
-         <Button variant="ghost" size={isCollapsed ? "icon" : "default"} className="w-full justify-start gap-3" onClick={() => setIsCollapsed(!isCollapsed)}>
-          {isCollapsed ? <PanelLeftOpen className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
-          {!isCollapsed && "Collapse"}
-        </Button>
-        <Button variant="ghost" size={isCollapsed ? "icon" : "default"} className="w-full justify-start gap-3" onClick={logout}>
-            <LogOut className="h-5 w-5" />
-            {!isCollapsed && "Logout"}
-        </Button>
       </div>
     </aside>
   );
