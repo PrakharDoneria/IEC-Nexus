@@ -102,32 +102,54 @@ export default function ChatPage() {
     const [imageData, setImageData] = useState<string | null>(null);
     const [editingMessage, setEditingMessage] = useState<Message | null>(null);
 
-    const messagesEndRef = useRef<HTMLDivElement>(null);
+    const [hasMore, setHasMore] = useState(true);
+    const [nextCursor, setNextCursor] = useState<string | null>(null);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const chatContainerRef = useRef<HTMLDivElement>(null);
+
     const isFetching = useRef(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const scrollToBottom = (behavior: 'smooth' | 'auto' = 'auto') => {
-        messagesEndRef.current?.scrollIntoView({ behavior });
-    }
-
-    const fetchMessages = useCallback(async () => {
-        if (!conversationId || isFetching.current || !idToken) return;
+    const fetchMessages = useCallback(async (cursor?: string | null) => {
+        if (isFetching.current) return;
         isFetching.current = true;
-        setLoading(true);
+        if (cursor) {
+            setLoadingMore(true);
+        } else {
+            setLoading(true);
+        }
+        
         try {
-            const res = await fetch(`/api/messages/${conversationId}`, {
+            const url = cursor ? `/api/messages/${conversationId}?cursor=${cursor}` : `/api/messages/${conversationId}`;
+            const res = await fetch(url, {
                 headers: { 'Authorization': `Bearer ${idToken}` }
             });
             if (!res.ok) throw new Error("Failed to load messages");
             const data = await res.json();
-            setMessages(data.messages);
+            
+            const prevScrollHeight = chatContainerRef.current?.scrollHeight;
+
+            setMessages(prev => cursor ? [...data.messages, ...prev] : data.messages);
             setParticipant(data.participant);
-            fetchUnreadCount(); // Refresh total unread count after marking as read
+            setNextCursor(data.nextCursor);
+            setHasMore(!!data.nextCursor);
+            
+            if (!cursor) {
+                fetchUnreadCount(); // Refresh total unread count after marking as read
+            }
+
+            // Maintain scroll position after prepending new messages
+            if (cursor && chatContainerRef.current && prevScrollHeight) {
+                chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight - prevScrollHeight;
+            }
+
+
         } catch (error) {
             toast({ variant: 'destructive', title: 'Error', description: 'Could not load messages.'});
-            router.push('/messages');
+            if (!cursor) router.push('/messages');
         } finally {
             setLoading(false);
+            setLoadingMore(false);
             isFetching.current = false;
         }
     }, [conversationId, idToken, router, fetchUnreadCount]);
@@ -137,13 +159,14 @@ export default function ChatPage() {
         if (conversationId && idToken) {
             fetchMessages(); 
         }
-    }, [conversationId, idToken, fetchMessages]);
+    }, [conversationId, idToken]); // Removed fetchMessages from dep array
 
     useEffect(() => {
-       if (messages.length > 0) {
-            scrollToBottom();
-       }
-    }, [messages.length]);
+        if (!loading) {
+            // Scroll to bottom on initial load
+            chatContainerRef.current?.scrollTo({ top: chatContainerRef.current.scrollHeight, behavior: 'auto' });
+        }
+    }, [loading]);
 
     const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -206,6 +229,9 @@ export default function ChatPage() {
             setNewMessage("");
             setImageData(null);
             setImagePreview(null);
+            setTimeout(() => {
+                chatContainerRef.current?.scrollTo({ top: chatContainerRef.current.scrollHeight, behavior: 'smooth' });
+            }, 100);
         } catch (error) {
              toast({ variant: 'destructive', title: 'Error', description: 'Could not send message.'});
         } finally {
@@ -270,7 +296,7 @@ export default function ChatPage() {
             <AppSidebar />
             <div className="flex-1 flex flex-col h-screen">
                 <MobileNav pageTitle={participant.name} />
-                <header className="hidden md:flex h-16 shrink-0 items-center border-b bg-card px-4 md:px-6">
+                <header className="hidden md:flex h-16 shrink-0 items-center border-b-2 border-foreground bg-card px-4 md:px-6">
                     <Link href={`/profile/${participant.id}`} className="flex items-center gap-3">
                         <Avatar>
                             <AvatarImage src={participant.avatar} />
@@ -283,7 +309,16 @@ export default function ChatPage() {
                     </Link>
                 </header>
 
-                <main className="flex-1 overflow-y-auto p-4 space-y-2 bg-secondary/50 pb-24 md:pb-4">
+                <main ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 space-y-2 bg-secondary/50 pb-24 md:pb-4">
+                    <div className="text-center">
+                        {loadingMore ? (
+                             <Loader2 className="h-6 w-6 animate-spin mx-auto my-2" />
+                        ) : hasMore ? (
+                             <Button variant="secondary" size="sm" onClick={() => fetchMessages(nextCursor)}>Load More</Button>
+                        ) : (
+                            <p className="text-xs text-muted-foreground my-2">Beginning of conversation</p>
+                        )}
+                    </div>
                     {messages.map((msg, index) => {
                         const isOwnMessage = msg.senderId === user?.id;
                         return (
@@ -314,12 +349,11 @@ export default function ChatPage() {
                             </div>
                         )
                     })}
-                    <div ref={messagesEndRef} />
                 </main>
 
                 <footer className="p-4 border-t bg-card shrink-0 fixed bottom-16 md:relative md:bottom-0 w-full">
                      {editingMessage && (
-                        <div className="flex items-center justify-between bg-secondary p-2 rounded-md mb-2 border">
+                        <div className="flex items-center justify-between bg-secondary p-2 rounded-md mb-2 border-2 border-foreground">
                             <div>
                                 <p className="font-bold text-sm">Editing Message</p>
                                 <p className="text-xs text-muted-foreground truncate">{editingMessage.content}</p>
@@ -363,5 +397,3 @@ export default function ChatPage() {
        </div>
     );
 }
-
-    

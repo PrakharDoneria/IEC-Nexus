@@ -7,6 +7,8 @@ import { ObjectId } from 'mongodb';
 import { sendNotification } from '@/services/notifications';
 import cloudinary from '@/lib/cloudinary';
 
+const MESSAGES_PER_PAGE = 20;
+
 // Get messages for a conversation and mark as read
 export async function GET(req: NextRequest, { params }: { params: { conversationId: string } }) {
   try {
@@ -21,6 +23,9 @@ export async function GET(req: NextRequest, { params }: { params: { conversation
       return NextResponse.json({ message: 'Invalid conversation ID' }, { status: 400 });
     }
     const conversationId = new ObjectId(params.conversationId);
+    
+    const { searchParams } = new URL(req.url);
+    const cursor = searchParams.get('cursor');
 
     const client = await clientPromise;
     const db = client.db();
@@ -31,16 +36,24 @@ export async function GET(req: NextRequest, { params }: { params: { conversation
         return NextResponse.json({ message: 'Forbidden' }, { status: 403 });
     }
     
-    // Mark messages as read by the current user
-    await db.collection('messages').updateMany(
-      { conversationId, readBy: { $ne: userId } },
-      { $addToSet: { readBy: userId } }
-    );
+    // Mark messages as read by the current user when they load the chat
+    if (!cursor) { // Only mark as read on initial load, not for older messages
+        await db.collection('messages').updateMany(
+        { conversationId, readBy: { $ne: userId } },
+        { $addToSet: { readBy: userId } }
+        );
+    }
     
+    const query: any = { conversationId };
+    if (cursor && ObjectId.isValid(cursor)) {
+        query._id = { $lt: new ObjectId(cursor) };
+    }
+
     const messages = await db.collection('messages')
         .aggregate([
-            { $match: { conversationId } },
-            { $sort: { timestamp: 1 } },
+            { $match: query },
+            { $sort: { timestamp: -1 } }, // Sort descending to get latest first
+            { $limit: MESSAGES_PER_PAGE },
             {
                 $lookup: {
                     from: 'users',
@@ -65,14 +78,17 @@ export async function GET(req: NextRequest, { params }: { params: { conversation
                         avatar: '$senderInfo.avatar',
                     }
                 }
-            }
+            },
+            { $sort: { timestamp: 1 } }, // Sort back to ascending for display
         ])
         .toArray();
         
     const otherParticipantId = conversation.participants.find((p: string) => p !== userId);
     const participantDetails = await db.collection('users').findOne({ id: otherParticipantId });
+    
+    const nextCursor = messages.length === MESSAGES_PER_PAGE ? messages[0]._id : null;
 
-    return NextResponse.json({ messages, participant: participantDetails });
+    return NextResponse.json({ messages, participant: participantDetails, nextCursor });
 
   } catch (error) {
     console.error('Error fetching messages:', error);
